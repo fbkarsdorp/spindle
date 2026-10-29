@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+data/build/
+data/index/
+*.pyc
+.DS_Store
+tools/node_modules/

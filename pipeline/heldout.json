@@ -1,0 +1,385 @@
+[
+ {
+  "q": "a mother's ghost comes back at night to nurse her baby",
+  "gold": [
+   "E323.1.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the hero's strength is in his hair",
+  "gold": [
+   "D1831",
+   "F531.1.6.13"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a man burns his animal wife's skin so that she cannot change back",
+  "gold": [
+   "D793.2",
+   "D721.3"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a man trades his soul for riches",
+  "gold": [
+   "M211",
+   "M210"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the first people were shaped out of clay",
+  "gold": [
+   "A1241",
+   "A1241.1",
+   "A1241.3"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the trickster gets stuck to a figure covered in tar",
+  "gold": [
+   "K741"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a fool thinks his reflection in the water is somebody else",
+  "gold": [
+   "J1791",
+   "J1791.1",
+   "J1791.2",
+   "J1791.3",
+   "J1791.3.1",
+   "J1791.3.2",
+   "J1791.3.2.1",
+   "J1791.3.3",
+   "J1791.3.4",
+   "J1791.4",
+   "J1791.5",
+   "J1791.5.1",
+   "J1791.5.2",
+   "J1791.5.3",
+   "J1791.6",
+   "J1791.6.0.1",
+   "J1791.6.1",
+   "J1791.6.2",
+   "J1791.7",
+   "J1791.7.1",
+   "J1791.8",
+   "J1791.9",
+   "J1791.10",
+   "J1791.11",
+   "J1791.12"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the king orders every newborn boy to be killed",
+  "gold": [
+   "S302.1",
+   "M375.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the tide comes and goes because a sea monster breathes",
+  "gold": [
+   "A913.2",
+   "A913"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a woman gives birth to a snake",
+  "gold": [
+   "T554.7"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a man is so holy that he can walk on the water",
+  "gold": [
+   "V51.1",
+   "D2125.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "why the moon has dark marks on its face",
+  "gold": [
+   "A751",
+   "A751.1",
+   "A751.1.1",
+   "A751.1.2",
+   "A751.1.3",
+   "A751.1.4",
+   "A751.2",
+   "A751.3",
+   "A751.3.1",
+   "A751.4",
+   "A751.5",
+   "A751.5.1",
+   "A751.5.2",
+   "A751.5.2.1",
+   "A751.5.3",
+   "A751.5.4",
+   "A751.5.5",
+   "A751.6",
+   "A751.6.1",
+   "A751.7",
+   "A751.8",
+   "A751.8.1",
+   "A751.8.2",
+   "A751.8.3",
+   "A751.8.4",
+   "A751.8.5",
+   "A751.8.6",
+   "A751.9",
+   "A751.9.1",
+   "A751.9.2",
+   "A751.9.3",
+   "A751.10",
+   "A751.10.1",
+   "A751.10.2",
+   "A751.11"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the devil builds a bridge",
+  "gold": [
+   "G303.9.1.1",
+   "G303.14.2"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a husband pretends to be dead to see if his wife is faithful",
+  "gold": [
+   "H466"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a girl whose tears turn into pearls",
+  "gold": [
+   "F239.6",
+   "H31.7.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a man falls asleep for many years and wakes to find the world changed",
+  "gold": [
+   "D1960.1",
+   "D2011",
+   "D1960"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a ring thrown into the sea is found in the belly of a fish",
+  "gold": [
+   "N211.1",
+   "B548.2.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a liar's tongue is cut out as a punishment",
+  "gold": [
+   "Q451.4",
+   "Q451.4.1",
+   "Q451.4.2",
+   "Q451.4.3",
+   "Q451.4.4",
+   "Q451.4.5",
+   "Q451.4.6",
+   "Q451.4.7",
+   "Q451.4.8",
+   "Q451.4.8.1",
+   "Q451.4.9",
+   "Q451.4.10"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "animals can talk on Christmas night",
+  "gold": [
+   "B251.1.2",
+   "B251.1.2.1",
+   "B251.1.2.2",
+   "B251.1.2.3"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a man dresses as a woman to get into the women's rooms",
+  "gold": [
+   "K1321.1",
+   "K1321"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "magic ring",
+  "gold": [
+   "D1076"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "werewolf",
+  "gold": [
+   "D113.1.1"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "tar baby",
+  "gold": [
+   "K741"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "golden apples",
+  "gold": [
+   "C713.4",
+   "D1520.4",
+   "E711.8",
+   "E745.5.1",
+   "F813.1.1",
+   "H91.3",
+   "H1151.1",
+   "H1226.3",
+   "H1596.1",
+   "K2365.2"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "cloak of invisibility",
+  "gold": [
+   "D1361.12"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "flying carpet",
+  "gold": [
+   "D1155",
+   "D1520.19"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "dragon fight",
+  "gold": [
+   "B11.11"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "unicorn",
+  "gold": [
+   "B13"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "water of life",
+  "gold": [
+   "E80",
+   "E82",
+   "H1321.1"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "cannibal witch",
+  "gold": [
+   "G11.3"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "talking horse",
+  "gold": [
+   "B211.1.3"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "pact with the devil",
+  "gold": [
+   "M210",
+   "M211"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "seven-headed dragon",
+  "gold": [
+   "B11.2.3.1",
+   "B11.2.3"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "magic sword",
+  "gold": [
+   "D1081"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "ghost ship",
+  "gold": [
+   "E535.3"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "fairy ring",
+  "gold": [
+   "F261.1",
+   "F261.1.1"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "fountain of youth",
+  "gold": [
+   "D1338.1.1"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "buried treasure",
+  "gold": [
+   "N511",
+   "N511.1"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "riddle contest",
+  "gold": [
+   "H548",
+   "H540"
+  ],
+  "kind": "keyword"
+ },
+ {
+  "q": "swan maiden",
+  "gold": [
+   "D361.1"
+  ],
+  "kind": "keyword"
+ }
+]

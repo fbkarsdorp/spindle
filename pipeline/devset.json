@@ -1,0 +1,236 @@
+[
+ {
+  "q": "a man who turns into a wolf at night",
+  "gold": [
+   "D113.1.1",
+   "D622.1",
+   "D113.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the prince searches the kingdom for the girl whose foot fits the lost shoe",
+  "gold": [
+   "H36.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a witch lives in a house made of bread and sweets to lure children",
+  "gold": [
+   "G412.1",
+   "F771.1.10"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the youngest of three brothers succeeds after the elder ones fail",
+  "gold": [
+   "L10",
+   "L13"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "whoever can make the sad princess laugh may marry her",
+  "gold": [
+   "H341"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a monster asks a riddle and kills those who cannot answer",
+  "gold": [
+   "H541.1.1",
+   "H541.1",
+   "H761"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "musical instrument that forces everyone who hears it to dance",
+  "gold": [
+   "D1415.2.3",
+   "D1415.2.1",
+   "D1415.2",
+   "D1415.2.2"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the clever peasant lets the devil choose the tops of the crop, then plants turnips",
+  "gold": [
+   "K171.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "someone who can understand what the birds are saying",
+  "gold": [
+   "B216",
+   "B215",
+   "B165"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the new bride is forbidden to open one room in the castle",
+  "gold": [
+   "C611",
+   "C611.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "why the bear has only a stump for a tail",
+  "gold": [
+   "A2216.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a bird woman whose feather cloak is stolen while she bathes so she must marry the thief",
+  "gold": [
+   "D361.1",
+   "K1335"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the giant cannot be killed because his life is hidden in an egg far away",
+  "gold": [
+   "E711.1",
+   "E710"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a piper whose music makes people follow him wherever he goes",
+  "gold": [
+   "D1427.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the fox praises the crow's singing so it drops its food",
+  "gold": [
+   "K334.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a slow animal wins a race against a fast one who takes a nap",
+  "gold": [
+   "K11.3"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the whole world is flooded and survivors escape in a boat",
+  "gold": [
+   "A1021",
+   "A1010"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "hero escapes from the one-eyed giant's cave clinging under a sheep",
+  "gold": [
+   "K603"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "fools try to carry daylight into a house without windows",
+  "gold": [
+   "J2123"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a table that covers itself with food on command",
+  "gold": [
+   "D1472.1.7",
+   "D1153",
+   "D1472.1.8"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "the king's barber knows the king has donkey ears and the secret is revealed by reeds",
+  "gold": [
+   "F511.2.2",
+   "D1316.5"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a ghost comes back to show where money is buried",
+  "gold": [
+   "E371",
+   "E545.12"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "boots that let you cover enormous distances in one step",
+  "gold": [
+   "D1521.1"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a fisherman marries a woman who was really a seal",
+  "gold": [
+   "B651.8",
+   "D327.2",
+   "B601.18"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a hat that makes the wearer invisible",
+  "gold": [
+   "D1361.15",
+   "K1349.10",
+   "F455.5.3"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a dead man returns to help the hero who paid for his burial",
+  "gold": [
+   "E341"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "evil stepmother mistreats her stepdaughter",
+  "gold": [
+   "S31"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "a lion remains grateful to the man who pulled a thorn from its foot",
+  "gold": [
+   "B381"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "princess sleeps for a century until a prince wakes her",
+  "gold": [
+   "D1960.3",
+   "D1364.17"
+  ],
+  "kind": "description"
+ },
+ {
+  "q": "tiny boy no bigger than a thumb",
+  "gold": [
+   "F535.1"
+  ],
+  "kind": "description"
+ }
+]

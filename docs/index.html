@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spindle · Thompson's Motif-Index</title>
+<meta name="description" content="Search Stith Thompson's Motif-Index of Folk-Literature by meaning: describe a motif in your own words and find it, however Thompson worded it.">
+<link rel="icon" href="art/spindle.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/app.css">
+<script>
+  // apply the saved theme before first paint
+  try { const t = localStorage.getItem('spindle-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="masthead">
+  <a class="brand" href="#/" aria-label="Spindle, home">
+    <span class="brand-mark" data-art="spindle"></span>
+    <span class="brand-name">Spindle</span>
+  </a>
+  <nav class="nav" aria-label="Main">
+    <a href="#/search" data-nav="search">Search</a>
+    <a href="#/browse" data-nav="browse">Browse</a>
+    <a href="#/map" data-nav="map">Map</a>
+    <a href="#/about" data-nav="about">About</a>
+  </nav>
+  <button class="theme-toggle" type="button" aria-label="Toggle night mode" title="Day / night">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path class="sun" d="M12 7a5 5 0 1 0 0 10a5 5 0 0 0 0-10zm0-5v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1M4.9 19.1l2.1-2.1m10-10l2.1-2.1"/><path class="moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+  </button>
+</header>
+
+<main id="main" tabindex="-1"></main>
+
+<footer class="colophon">
+  <span class="divider" data-art="divider"></span>
+  <p>Stith Thompson, <i>Motif-Index of Folk-Literature</i>, revised and enlarged edition, Bloomington 1955–58.
+  Spindle is a successor to <a href="https://doi.org/10.1080/0015587X.2015.1006954">MOMFER</a> (Karsdorp et al., <i>Folklore</i> 126, 2015).
+  Everything runs in your browser.</p>
+</footer>
+
+<div class="toast" role="status" aria-live="polite"></div>
+<script type="module" src="static/app.js"></script>
+</body>
+</html>

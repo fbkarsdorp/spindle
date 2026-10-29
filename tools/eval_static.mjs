@@ -1,0 +1,39 @@
+// Benchmark the static site's search code with the browser model, in Node.
+//   node tools/eval_static.mjs [queries.json] [--dtype q8] [--lex 0.6]
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+import { pipeline } from '@huggingface/transformers';
+import { Index } from '../docs/static/search.js';
+
+const args = process.argv.slice(2);
+const opt = (name, dflt) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : dflt; };
+const file = ROOT + (args.find((a) => a.endsWith('.json')) || 'pipeline/devset.json');
+const dtype = opt('--dtype', 'q8');
+const lexes = opt('--lex', 'auto').split(',').map((x) => (x === 'auto' ? null : +x));
+
+const D = ROOT + 'docs/data/';
+const json = (f) => JSON.parse(readFileSync(D + f, 'utf8'));
+const buf = (f) => { const b = readFileSync(D + f); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
+const index = new Index({
+  meta: json('meta.json'), motifs: json('motifs.json'), tree: json('tree.json'),
+  vectors: new Int8Array(buf('vectors.i8')), projection: new Float32Array(buf('projection.f32')),
+});
+const extractor = await pipeline('feature-extraction', index.meta.model, { dtype });
+const embed = async (t) => (await extractor(t, { pooling: 'cls', normalize: true })).data;
+
+const queries = JSON.parse(readFileSync(file, 'utf8'));
+for (const lexWeight of lexes) {
+  let h1 = 0, h10 = 0, mrr = 0, ms = 0;
+  const misses = [];
+  for (const { q, gold } of queries) {
+    const t0 = performance.now();
+    const { results } = await index.search(q, embed, { k: 10, lexWeight });
+    ms += performance.now() - t0;
+    const ids = results.map((r) => index.rows[r.row][0]);
+    const r = ids.findIndex((id) => gold.includes(id));
+    if (r >= 0) { h10++; if (r === 0) h1++; mrr += 1 / (r + 1); } else misses.push(q);
+  }
+  const n = queries.length;
+  console.log(`${dtype} lex=${lexWeight ?? 'auto'}: hit@1 ${(h1 / n).toFixed(2)} hit@10 ${(h10 / n).toFixed(2)} mrr ${(mrr / n).toFixed(3)}  [${(ms / n).toFixed(0)} ms/query]`);
+}

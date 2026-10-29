@@ -1,0 +1,19 @@
+[project]
+name = "spindle"
+version = "0.2.0"
+description = "A semantic search engine for Stith Thompson's Motif-Index of Folk-Literature, served as a static site"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "lxml>=6.1.3",
+    "numpy>=2.5.4",
+    "sentence-transformers>=6.2.0",
+    "torch>=2.15.0",
+    "umap-learn>=0.5.12",
+]
+
+[dependency-groups]
+dev = [
+    "playwright>=1.58.0",
+]
