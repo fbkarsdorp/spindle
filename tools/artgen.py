@@ -231,9 +231,11 @@ def fox():
     return ink, holes
 
 
-def mole():
-    """A mole (after Momfer de Mol) peeking out of its molehill, facing left.
-    Origin at the middle of the molehill's top. Returns (ink, holes, accent)."""
+def mole(peek=False):
+    """A mole (after Momfer de Mol) peeking out of the ground, facing left.
+    Origin at ground level below its chest. With peek, there is no molehill and
+    only the front paw is drawn (the rest is hidden behind something).
+    Returns (ink, holes, accent)."""
     mound = "M-34,40 C-30,8 -20,-4 0,-5 C20,-4 30,8 34,40 Z"
     body = ("M15,-3 C17,-17 11,-28 -1,-29 C-9,-29.5 -15,-25 -19,-19.5 "
             "C-22,-17.5 -25,-16.5 -27.5,-15.8 C-29,-15.2 -29,-13 -27.5,-12.6 "
@@ -246,6 +248,13 @@ def mole():
         whiskers += P(tapered((-22, -14.5), ((-22 + ex) / 2, (-14.5 + ey) / 2 - 0.6),
                               ((-22 + ex) / 2, (-14.5 + ey) / 2 - 0.6), (ex, ey), 1.1, 0.3, k=12))
     crumbs = P(circ(-40, 0, 1.6)) + P(circ(-45, 5, 1.1)) + P(circ(39, -2, 1.4)) + P(circ(44, 4, 1.0)) + P(circ(36, -8, 0.9))
+    if peek:
+        ink = P(body) + P(paw_l) + whiskers
+        holes = (CUT("M-26,-1.5 C-18,1.5 -8,1.5 -3,-0.5", 1.6) + CUT(paw_l, 1.3) +
+                 CUT("M-14,-20.2 Q-11,-16.8 -8,-20.2", 1.7) +
+                 "".join(CUT(f"M{n(x + 4.5)},{n(y)} L{n(x + 0.8)},{n(y + 0.9)}", 1.2)
+                         for (x, y) in ((-21, -4.6), (-21.4, -2.6), (-20.6, -0.6))))
+        return ink, holes, P(circ(-28.6, -14.2, 2.6))
     ink = P(mound) + P(body) + P(paw_l) + P(paw_r) + whiskers + crumbs
     holes = (
         # rim of the hole the mole looks out of, and the outlines of the paws
@@ -931,12 +940,14 @@ def hero():
     holes += H(circ(584, 62, 36))
     holes += H(lens(548, 66, 8, 3, 0)) + CUT("M546,84 Q552,90 560,88", 1.8)
     ink += P(sparkle(600, 120, 6)) + P(sparkle(520, 30, 5))
-    # one asymmetry: a mole (for MOMFER, after Momfer de Mol) peeking out on the right slope
-    m_ink, m_holes, m_acc = mole()
-    tr = "translate(510 336) scale(1.12)"
+    # one asymmetry: a small mole (for MOMFER, after Momfer de Mol) peeking out
+    # from behind the trunk, facing right
+    m_ink, m_holes, m_acc = mole(peek=True)
+    tr = "translate(337.5 319) scale(-0.55 0.55)"
     ink += g(m_ink, tr)
     holes += g(m_holes, tr)
     acc_full += g(m_acc, tr)
+    holes += CUT("M335.3,297.7 L336.12,308.47 L337.02,319.08", 1.3)  # the trunk's edge, in front of the mole
     write("hero", W, 360, ink, holes, acc_full)
 
 

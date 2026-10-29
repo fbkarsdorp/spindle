@@ -797,7 +797,7 @@ async function viewAbout() {
     <h1>About Spindle</h1>
     <p>Stith Thompson’s <i>Motif-Index of Folk-Literature</i> (1932–36; revised and enlarged 1955–58) classifies the recurring elements of traditional narrative — the swan maiden, the forbidden chamber, the trickster who feigns death — into a tree of some ${fmt(ix.n)} numbered motifs, each with a trail of references to the collections where it occurs. It remains the common language of folk-narrative research, and it remains hard to search: a motif is found only if one guesses Thompson’s wording, or the branch he filed it under.</p>
     <p>Spindle searches it by meaning. It is a successor to MOMFER, the <i>Meertens Online Motif FindER</i> (Karsdorp, Van der Meulen, Meder &amp; Van den Bosch, <a href="https://doi.org/10.1080/0015587X.2015.1006954"><i>Folklore</i> 126 (2015)</a>), which matched words and expanded them through WordNet. Spindle compares meanings directly, and does so entirely in your browser: there is no server.</p>
-    <p>The mole on the hill below the tree of tales is for MOMFER, whose name also belonged to Momfer de Mol of <i>De Fabeltjeskrant</i>.</p>
+    <p>The mole peeking out from behind the tree of tales is for MOMFER, whose name also belonged to Momfer de Mol of <i>De Fabeltjeskrant</i>.</p>
 
     <h2>How it works</h2>
     <ul>
