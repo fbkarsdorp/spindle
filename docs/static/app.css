@@ -18,8 +18,8 @@
   --indigo: #2f416e;
   --shadow: 0 1px 0 rgba(60, 40, 20, 0.04), 0 6px 24px -12px rgba(60, 40, 20, 0.25);
 
-  --display: "IM Fell English", "Iowan Old Style", Georgia, serif;
-  --display-sc: "IM Fell English SC", "IM Fell English", Georgia, serif;
+  --display: "Alegreya", "Iowan Old Style", Georgia, serif;
+  --display-sc: "Alegreya SC", "Alegreya", Georgia, serif;
   --text: "EB Garamond", "Iowan Old Style", Garamond, Georgia, serif;
 
   --measure: 68ch;
@@ -464,3 +464,4 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; line-height: 1.15; m
 .model-bar i { position: absolute; inset: 0 auto 0 0; background: var(--red); transition: width .2s; }
 .map-loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 @media (max-width: 560px) { .result .score { display: none; } }
+.region .cul { align-items: flex-start; align-content: flex-start; }

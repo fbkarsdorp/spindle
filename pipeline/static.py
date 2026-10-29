@@ -140,13 +140,27 @@ def main():
     notable = [i for i, m in enumerate(motifs)
                if m.get("note") and len(m.get("cultures", [])) >= 2 and len(m["title"]) < 90]
 
-    # the region each tradition belongs to (by majority over the motifs citing it)
-    votes = defaultdict(lambda: defaultdict(int))
+    # the region each tradition belongs to, recomputed with build.py's own rules
+    sys.path.insert(0, str(ROOT / "pipeline"))
+    from build import canon_culture
+
+    region_of = {}
     for m in motifs:
-        if len(m.get("regions", [])) == 1:
-            for c in m.get("cultures", []):
-                votes[c][m["regions"][0]] += 1
-    culture_regions = [ridx[max(votes[c], key=votes[c].get)] if votes[c] else -1 for c in cultures]
+        for c in m.get("cultures", []):
+            if c not in region_of:
+                hit = canon_culture(c)
+                region_of[c] = hit[1] if hit else None
+    # traditions whose canonical name no longer maps on its own: majority over the motifs citing them
+    votes = defaultdict(lambda: defaultdict(float))
+    for m in motifs:
+        for c in m.get("cultures", []):
+            for r in m.get("regions", []):
+                votes[c][r] += 1 / len(m["regions"])
+    culture_regions = []
+    for c in cultures:
+        r = region_of.get(c) or (max(votes[c], key=votes[c].get) if votes[c] else None)
+        culture_regions.append(ridx[r] if r in ridx else -1)
+    print(f"traditions without a region: {culture_regions.count(-1)}", file=sys.stderr)
 
     json.dump({
         "culture_regions": culture_regions,
