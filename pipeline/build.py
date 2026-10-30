@@ -61,19 +61,19 @@ def tidy_heading(s: str) -> str:
 REGIONS = [
     ("Celtic", r"irish|ireland|welsh|wales|scot|breton|celtic|manx|cornish|gaelic|highland"),
     ("Northern Europe", r"icel|norse|danish|denmark|norw|swed|faroe|finn|lapp|esth|eston|livon|lithuan|lett|latvia|scandinav|eddic|saga"),
-    ("Western Europe", r"english|england|german|swiss|switz|austria|tirol|tyrol|flemish|dutch|holland|belg|french(?! canad)|france|gascon|lorraine|italian|italy|sicil|tuscan|spanish|spain|catalan|portug|basque|romance|exempl|mediaeval|medieval|european|europe|fabliau|prussian|germanic|frisian|walloon|novella"),
-    ("Eastern Europe", r"russia|slav|czech|bohem|polish|poland|serb|croat|bulgar|ruman|roman(?!ce|o)|hungar|magyar|cherem|mordvin|votyak|wotjak|ukrain|slovak|slovene|wend|ossete|georgia(?!\))|caucas|gypsy|yugoslav|albania|greek modern"),
-    ("Mediterranean & Near East", r"greek|roman|latin|jewish|hebrew|talmud|rabbin|arab|persia|babylon|assyr|egypt|turk|armenia|syria|sumer|hittite|semitic|islam|moham|koran|bible|biblical|palestin|iran|kurd|berber|moroc|algeri|tunis|cypr|byzant"),
-    ("South Asia", r"india(?!n)|east indian|hindu|buddh|ceylon|sinhal|bengal|panjab|punjab|tamil|kashmir|santal|deccan|tibet|nepal|jataka|panchatantra|sanskrit|pali|gond|bihar|assam|oraon|munda|kota|toda"),
-    ("East Asia", r"chin|japan|korea|ainu|indo-chin|annam|burm|siam|thai|cambod|viet|laos|mongol(?!ian\b)|manchu|formosa|taiwan"),
+    ("Western Europe", r"english|england|german(?! new guinea)|swiss|switz|austria|tirol|tyrol|flemish|dutch|holland|belg|(?<!missouri )french(?! canad)|france|gascon|lorraine|italian|italy|sicil|tuscan|spanish|spain|catalan|portug|basque|romance|exempl|mediaeval|medieval|european|europe|fabliau|prussian|germanic|frisian|walloon|novella"),
+    ("Eastern Europe", r"russia|slav|czech|bohem|polish|poland|serb|croat|bulgar|ruman|romania|hungar|magyar|cherem|mordvin|votyak|wotjak|ukrain|slovak|slovene|wend|ossete|circassia|georgian(?! negro)|caucas|gypsy|yugoslav|albania|greek modern"),
+    ("Mediterranean & Near East", r"greek|roman|etrusc|western asia|latin|jewish|hebrew|talmud|rabbin|arab|persia|babylon|assyr|egypt|turk|armenia|syria|sumer|hittite|semitic|islam|moham|koran|bible|biblical|palestin|iran|kurd|berber|moroc|algeri|tunis|cypr|byzant"),
+    ("South Asia", r"india(?!n)|east indian|hindu|buddh|ceylon|sinhal|bengal|panjab|punjab|tamil|kashmir|santal|deccan|tibet|nepal|jataka|panchatantra|sanskrit|\bpali\b|\bgond|bihar|\bassam|oraon|\bmunda\b|\bkota\b|\btoda\b"),
+    ("East Asia", r"chin(?!cha|ook)|japan|korea|ainu|indo-chin|annam|burm|siam|thai|cambod|viet|laos|mongol(?!ian\b)|manchu|formosa|taiwan"),
     ("Siberia & Central Asia", r"siberia|buriat|koryak|yakut|chukch|yukag|tatar|kalm|kirg|kazak|altai|samoyed|ostyak|vogul|gilyak|tungus|mongolian|turkest|ural"),
     ("Arctic", r"eskimo|greenland|aleut|inuit"),
-    ("Oceania", r"hawai|tahiti|tonga|maori|new zealand|marques|tuamotu|samoa|polynes|melanes|micrones|new hebrid|new guinea|papua|mono|alu|buin|fiji|indones|philipp|filipin|tinguian|borneo|sumatra|java|bali|celebes|malay|austral|easter is|cook is|marshall|carolin|gilbert|new britain|new ireland|solomon|oceani|banks is|torres|admiralty|trobriand|chatham|mangaia|rarotonga|niue|caroline|gilbert|truk|guam|madagascar|malagasy|lepers is|nias|dyak|batak|mentawei|andaman|nicobar|kei"),
-    ("Africa", r"africa|ekoi|fang|zulu|hottentot|bushman|benga|ila\b|ibo|kaffir|zanzibar|hausa|yoruba|congo|gold coast|vai\b|liberia|cape verde|basuto|angola|cameroon|fjort|duala|mpongwe|swahili|luba|thonga|togo|wute|wachaga|bulu|bushongo|ganda|ba ronga|kordofan|loango|bankon|upoto|wakweli|nigeria|sudan|ethiop|abyssin|somali|kenya|uganda|ashanti|dahomey|ewe|kikuyu|masai|nyanja|herero|lamba|bena|tanga|sotho|xhosa|bantu|nandi|kamba|ronga|nuer|dinka|shilluk|chaga|baganda|basa|gbaya|kpelle"),
+    ("Oceania", r"hawai|tahiti|tonga|maori|new zealand|marques|tuamotu|samoa|polynes|melanes|micrones|new hebrid|new guinea|papua|(?<!western )mono\b|\balu\b|buin|fiji|indones|philipp|filipin|tinguian|borneo|sumatra|java|\bbali\b|celebes|malay|austral|easter is|cook is|marshall|(?<!north )(?<!south )carolin|gilbert|new britain|new ireland|solomon|oceani|banks is|torres|admiralty|trobriand|chatham|mangaia|rarotonga|niue|caroline|gilbert|truk|guam|madagascar|malagasy|lepers is|\bnias\b|dyak|batak|mentawei|andaman|nicobar|\bkei\b"),
+    ("Africa", r"africa|ekoi|fang|zulu|hottentot|bushman|benga|ila\b|ibo|kaffir|zanzibar|hausa|yoruba|congo|gold coast|vai\b|liberia|cape verde|basuto|angola|cameroon|fjort|duala|mpongwe|swahili|luba|thonga|togo|wute|wachaga|bulu|bushongo|ganda|ba ronga|kordofan|loango|bankon|upoto|wakweli|nigeria|sudan|ethiop|abyssin|somali|kenya|uganda|ashanti|dahomey|\bewe\b|kikuyu|masai|nyanja|herero|lamba|\bbena\b|\btanga\b|sotho|xhosa|bantu|nandi|\bkamba\b|ronga|nuer|dinka|shilluk|chaga|baganda|\bbasa\b|gbaya|kpelle"),
     # Latin America first: its "south american indian" must win over North America's "american indian"
-    ("Latin America", r"s\.? ?a\.? indian|s\.? ?am\.? indian|south american|aztec|maya|inca|chibcha|carib|mexic|argentin|chile|brazil|peru|bolivia|colombia|venezuel|guiana|toba|chiriguano|cashinawa|tupinamba|warrau|yuracare|paressi|chamacoco|guarani|caingang|bacairi|chaco|tembe|mataco|araucan|tarascan|zapotec|quich|mosquito|cuna|jivaro|tukano|guaray|tenetehara|yamana|ona\b|bororo|kaingang|apinaye|sherente|munduruc|puerto ric|cuba|dominic|central america|nicaragua|panama|honduras|guatemal|costa rica|salvador|uruguay|paraguay|ecuador"),
-    ("North America", r"n\.? ?a\.? indian|n\.? ?am\.? indian|north american indian|calif|ojibwa|chippewa|pawnee|navaho|navajo|cherokee|seneca|tahltan|kaska|quileute|zu[nñ]i|pueblo|iroquois|micmac|menomini|klikitat|american indian|plains|cree|blackfoot|crow|sioux|dakota|kiowa|apache|hopi|tlingit|haida|tsimshian|kwakiutl|bella coola|salish|chinook|thompson river|shoshon|ute\b|paiute|arapaho|cheyenne|winnebago|fox\b|osage|wichita|caddo|creek|natchez|biloxi|seminole|choctaw|algonquin|maliseet|passamaquoddy|penobscot|montagnais|naskapi|athapask|nez perce|coeur|wishram|chilcotin|carrier|kathlamet|yurok|karok|hupa|maidu|pomo|wintu|yokuts|miwok|luiseno|mohave|diegue|pima|zuni|tewa|sia|acoma|laguna|cochiti|jicarilla|lipan|tonkawa|ponca|omaha|iowa|oto|mandan|hidatsa|arikara|assiniboin|gros ventre|kutenai|okanagon|wasco|takelma|coos|tillamook|nootka|comox|lillooet|shuswap|kalispel|sanpoil|flathead|joshua|alsea|siuslaw"),
-    ("Afro-Caribbean & North American folk", r"u\.? ?s\.?|united states|missouri|american negro|am\.? negro|negro|jamaica|west indies|bahama|haiti|louisiana|creole|north carolina|new york|canad|virginia|kentucky|tennessee|ozark|pennsylvania|georgia\)|georgia|ohio|illinois|indiana|texas|maine|new england|massachusetts|appalach|antilles|martinique|guadeloupe|trinidad|barbados|grenada|virgin is|surinam|negro|nova scotia|newfoundland|acadian"),
+    ("Latin America", r"s\.? ?a\.? indian|s\.? ?am\.? indian|south american|aztec|maya|inca|chibcha|chincha|carib|mexic|argentin|chile|brazil|peru|bolivia|colombia|venezuel|guiana|toba|chiriguano|cashinawa|tupinamba|warrau|yuracare|paressi|chamacoco|guarani|caingang|bacairi|chaco|tembe|mataco|araucan|tarascan|zapotec|quich|mosquito|cuna|jivaro|tukano|guaray|tenetehara|yamana|ona\b|bororo|kaingang|apinaye|sherente|munduruc|puerto ric|cuba|dominic|central america|nicaragua|panama|honduras|guatemal|costa rica|salvador|uruguay|paraguay|ecuador"),
+    ("North America", r"n\.? ?a\.? indian|n\.? ?am\.? indian|north american indian|calif|western mono|ojibwa|chippewa|pawnee|navaho|navajo|cherokee|seneca|tahltan|kaska|quileute|zu[nñ]i|pueblo|iroquois|micmac|menomini|klikitat|american indian|plains|cree|blackfoot|crow|sioux|dakota|kiowa|apache|hopi|tlingit|haida|tsimshian|kwakiutl|bella coola|salish|chinook|thompson river|shoshon|\bute\b|paiute|arapaho|cheyenne|winnebago|fox\b|osage|wichita|caddo|creek|natchez|biloxi|seminole|choctaw|algonquin|maliseet|passamaquoddy|penobscot|montagnais|naskapi|athapask|nez perce|coeur|wishram|chilcotin|carrier|kathlamet|yurok|karok|hupa|maidu|pomo|wintu|yokuts|miwok|luiseno|mohave|diegue|pima|zuni|tewa|\bsia\b|acoma|laguna|cochiti|jicarilla|lipan|tonkawa|ponca|omaha|iowa|\boto\b|mandan|hidatsa|arikara|assiniboin|gros ventre|kutenai|okanagon|wasco|takelma|coos|tillamook|nootka|comox|lillooet|shuswap|kalispel|sanpoil|flathead|joshua|alsea|siuslaw"),
+    ("Afro-Caribbean & North American folk", r"^u\.? ?s\.?$|\bu\. ?s\.|united states|missouri|american negro|am\.? negro|negro|jamaica|west indies|bahama|haiti|louisiana|creole|north carolina|new york|canad|virginia|kentucky|tennessee|ozark|pennsylvania|georgia\)|georgia|ohio|illinois|indiana|texas|maine|new england|massachusetts|appalach|antilles|martinique|guadeloupe|trinidad|barbados|grenada|virgin is|surinam|negro|nova scotia|newfoundland|acadian"),
 ]
 REGION_RE = [(name, re.compile(rx, re.I)) for name, rx in REGIONS]
 
@@ -113,11 +113,18 @@ CANON = [
 CANON_RE = [(re.compile(rx, re.I), name) for rx, name in CANON]
 
 GROUP_PREFIX = re.compile(
-    r"^(africa|african|n\.? ?a\.? indian|n\.? ?am\.? indian|north american indian|calif\.? indian|"
+    r"^(african american|africa|african|n\.? ?a\.? indian|n\.? ?am\.? indian|north american indian|calif\.? indian|"
     r"s\.? ?a\.? indian|s\.? ?am\.? indian|so\.? am\.? indian|south american indian|eskimo|american indian|"
     r"philippine|am\.? negro|american negro|india|papua|melanesia)\s*\((.+)\)$",
     re.I,
 )
+# a people named under one of these groups belongs to its region, whatever its name
+# resembles elsewhere ("Africa (Baluba)" is not Oceania's Alu)
+GROUP_REGIONS = {
+    "Africa": "Africa", "North American Indian": "North America", "South American Indian": "Latin America",
+    "Eskimo": "Arctic", "African American": "Afro-Caribbean & North American folk",
+    "Philippine": "Oceania", "Papua": "Oceania", "Melanesia": "Oceania", "India": "South Asia",
+}
 GROUP_NAMES = {
     "africa": "Africa", "african": "Africa", "eskimo": "Eskimo", "philippine": "Philippine",
     "india": "India", "papua": "Papua", "melanesia": "Melanesia",
@@ -138,6 +145,12 @@ def group_name(prefix: str) -> str:
 def canon_culture(label: str):
     """Map a raw reference label to (tradition, region) or None."""
     label = re.sub(r"\s+", " ", label.strip(" *([.,")).strip()
+    # the end of the previous sentence can cling to a label: "Odin.) Icelandic", "“…once.” Finnish"
+    m = re.match(r"^[^(]*?[)”?!]\s+(.+)$", label)
+    if m:
+        label = m.group(1)
+    if label.endswith(")") and "(" not in label:
+        label = label[:-1].strip()
     if not label or len(label) > 60 or NOT_CULTURE.match(label):
         return None
     if re.search(r"\d", label):
@@ -147,6 +160,11 @@ def canon_culture(label: str):
         group = group_name(m.group(1))
         people = m.group(2).split(",")[0].strip()
         tradition = f"{group} ({people})" if people else group
+        if group in GROUP_REGIONS:
+            # Thompson's "North American Indian" sometimes names Mexican or Caribbean peoples
+            if group == "North American Indian" and dict(REGION_RE)["Latin America"].search(people):
+                return tradition, "Latin America"
+            return tradition, GROUP_REGIONS[group]
         region_probe = group + " " + people
     else:
         tradition = label

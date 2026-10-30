@@ -18,11 +18,6 @@ const motifHref = (id) => go('/motif/' + encodeURIComponent(id));
 const browseHref = (id) => go('/browse/' + encodeURIComponent(id));
 const searchHref = (params) => go('/search?' + new URLSearchParams(params));
 
-const CAT_COLORS = {
-  A: '#b8432f', B: '#5d7f3a', C: '#7b4a8e', D: '#2f5d8a', E: '#6f6a64', F: '#c08a2b', G: '#8a3b2a', H: '#3d8a84',
-  J: '#9c6b3a', K: '#d0662f', L: '#4f6fa8', M: '#8c5f99', N: '#8f8f34', P: '#b39040', Q: '#2e7a5a', R: '#6a4e3b',
-  S: '#a33b5c', T: '#cf6c86', U: '#5b8fa8', V: '#7d6aa8', W: '#4c7a3a', X: '#d79a2a', Z: '#857c55',
-};
 const SHORT = {
   A: 'Mythological', B: 'Animals', C: 'Tabu', D: 'Magic', E: 'The dead', F: 'Marvels', G: 'Ogres', H: 'Tests',
   J: 'Wise & foolish', K: 'Deceptions', L: 'Reversals', M: 'Fate ordained', N: 'Chance & fate', P: 'Society',
@@ -70,7 +65,8 @@ const routes = [
   [/^\/motif\/(.+)$/, viewMotif],
   [/^\/browse\/?$/, viewBrowse],
   [/^\/browse\/(.+)$/, viewBrowse],
-  [/^\/map\/?$/, viewMap],
+  [/^\/map\/?$/, () => navigate(go('/atlas'), { replace: true })], // the meaning map, retired
+  [/^\/atlas\/?$/, viewAtlas],
   [/^\/about\/?$/, viewAbout],
 ];
 let cleanup = null;
@@ -206,7 +202,7 @@ async function viewHome() {
           <div class="ways">
             <div class="way"><span class="num">i</span><div><h3><a href="${go('/search')}">Describe</a></h3><p>Say what happens — “a girl must not look back” — and Spindle finds the motifs that mean it, in any branch of the index.</p></div></div>
             <div class="way"><span class="num">ii</span><div><h3><a href="${go('/browse')}">Browse</a></h3><p>Walk Thompson’s own tree from A to Z, from the twenty-three branches down to the last subdivision.</p></div></div>
-            <div class="way"><span class="num">iii</span><div><h3><a href="${go('/map')}">Wander</a></h3><p>Drift across a map on which kindred motifs lie together, whatever letter Thompson filed them under.</p></div></div>
+            <div class="way"><span class="num">iii</span><div><h3><a href="${go('/atlas')}">Travel</a></h3><p>See where Thompson’s sources tell a motif, on a papercut map of the world.</p></div></div>
           </div>
         </div>
         <div class="leaf oracle" aria-live="polite">
@@ -306,6 +302,7 @@ async function viewSearch() {
   col.innerHTML = `
     <div class="results-meta">
       <span>${res.length ? `${res.length === 60 ? 'Best 60' : res.length} motif${res.length === 1 ? '' : 's'}` : 'Nothing found'}${q ? ` for <i>${esc(q)}</i>` : ''} <span class="muted">· ${Math.round(data.ms)} ms</span></span>
+      ${q && res.length && res[0].via === 'meaning' ? `<a class="atlas-link" href="${go('/atlas?' + new URLSearchParams({ q }))}">where are these told?</a>` : ''}
       ${active.length ? `<span class="active">${active.map(([k, v]) => `<a class="chip" aria-pressed="true" href="${esc(withoutParam(k, v))}">${esc(labelFor(k, v))} ✕</a>`).join('')}</span>` : ''}
     </div>
     ${q && res.length && res[0].score < 0.25 && res[0].via === 'meaning' && !active.length ? `<p class="weak">Nothing in the index matches this closely; these are distant guesses. Thompson may use other words — try describing what happens.</p>` : ''}
@@ -470,6 +467,8 @@ function motifHTML(m, { full = false } = {}) {
     ${Object.keys(regions).length ? `<section><h4>Attested in <span class="hint">${m.cultures.length} tradition${m.cultures.length === 1 ? '' : 's'}</span></h4>
       <div class="regions">${Object.entries(regions).map(([r, cs]) => `<div class="region"><span class="rname">${esc(r)}</span><span class="cul">${cs.map((c) => `<a class="chip" href="${searchHref({ culture: c })}">${esc(c)}</a>`).join('')}</span></div>`).join('')}</div></section>` : ''}
 
+    <section class="where-map" hidden><h4>On the map <span class="hint"></span></h4><div class="minimap"></div></section>
+
     ${(m.types || []).length ? `<section><h4>Tale types <span class="hint">Aarne–Thompson</span></h4><div class="types">${m.types.map((t) => `<a class="chip" href="${searchHref({ type: t })}">Type ${esc(t)}</a>`).join('')}</div></section>` : ''}
 
     ${refs ? `<section><h4>References</h4><div class="refs">${longRefs ? `<span class="short">${refsHTML(refs.slice(0, 520).replace(/\s\S*$/, ''))} …</span><details><summary>all references</summary>${refsHTML(refs)}</details>` : refsHTML(refs)}</div></section>` : ''}
@@ -489,6 +488,7 @@ function motifHTML(m, { full = false } = {}) {
 }
 
 function wireMotif(root, m) {
+  whereMap(root, m);
   const copy = $('.copy', root);
   if (copy) copy.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(`${m.id}. ${m.title}`); toast('Copied ' + m.id); } catch (e) { toast('Could not copy'); }
@@ -581,212 +581,385 @@ function outlineNode(c) {
   </div></li>`;
 }
 
-// ------------------------------------------------------------------ map
+// ---------------------------------------------------------------- atlas
 
-async function viewMap() {
-  document.title = 'Map · Spindle';
-  const ix = await store.index();
-  main.innerHTML = `<div class="map-page">
-    <canvas aria-label="Map of all motifs"></canvas>
-    <div class="map-panel">
-      <h1>A map of motifs</h1>
-      <p>Each point is one of ${fmt(ix.n)} motifs, placed so that motifs alike in meaning lie together, whatever branch Thompson filed them under. Colour is the branch.</p>
-      <form class="map-search"><input type="search" placeholder="Light up a theme: dragons, riddles…" aria-label="Highlight motifs on the map"></form>
-      <div class="map-legend">${LETTERS.map((L) => `<button type="button" data-l="${L}" title="${esc(ix.categories[L])}"><i style="background:${CAT_COLORS[L]}"></i>${L} ${esc(SHORT[L])}</button>`).join('')}</div>
+const KIND_NOTE = {
+  b: 'A broad label Thompson uses for a whole region; drawn as a wash, not a point.',
+  t: 'A written or religious tradition rather than a place; set at its historical centre and drawn as a ring.',
+};
+const discPx = (n) => 2.4 + 0.27 * Math.sqrt(n);
+
+async function figuresSVG(geo) {
+  const parts = await Promise.all(geo.figures.map(async ([name, x, y, w]) => {
+    const svg = (await art(name)).replace(/<\?xml[^>]*>/, '');
+    const vb = (svg.match(/viewBox="([^"]+)"/) || [])[1];
+    if (!vb) return '';
+    const [, , vw, vh] = vb.split(/\s+/).map(Number);
+    const h = (w * vh) / vw;
+    return svg.replace('<svg ', `<svg class="fig" aria-hidden="true" x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" `);
+  }));
+  return parts.join('');
+}
+
+// the sea, the graticule and the land, cut from paper: a shadow, then the sheet itself
+function baseSVG(geo, id) {
+  return `<defs><clipPath id="${id}"><path d="${geo.sheet}"/></clipPath></defs>
+    <path class="sea" d="${geo.sheet}"/>
+    <g clip-path="url(#${id})">
+      <path class="grat" d="${geo.grat}"/>
+      <path class="land-shadow" d="${geo.land}" transform="translate(.9 1.3)"/>
+      <path class="land" d="${geo.land}"/>
+    </g>
+    <path class="sheet-edge" d="${geo.sheet}"/>`;
+}
+
+// one disc: its shadow, then the cut-paper disc in the style of its kind
+const discSVG = (p, r, u, extra = '') => `<circle class="dshadow" cx="${p.x + 0.5 * u}" cy="${p.y + 0.8 * u}" r="${r}"/>` +
+  `<circle class="disc k-${p.kind}${extra}" data-i="${p.i}" cx="${p.x}" cy="${p.y}" r="${r}"/>`;
+
+async function whereMap(root, m) {
+  const sec = $('.where-map', root);
+  if (!sec) return;
+  const { at, own, below } = await store.motifPlaces(m.id);
+  const keys = new Set([...own.keys(), ...below.keys()]);
+  if (!keys.size || !sec.isConnected) return;
+  const { geo, places } = at;
+  // frame the places, at least a third of the world wide, in the box's proportions
+  const pts = [...keys].map((i) => places[i]);
+  const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+  const aspect = 2.2;
+  let w = Math.max(geo.w / 3, Math.max(...xs) - Math.min(...xs) + 80), h = Math.max(...ys) - Math.min(...ys) + 60;
+  if (w / h < aspect) w = h * aspect; else h = w / aspect;
+  const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+  const u = w / 640; // map units per pixel at the usual width
+  const order = pts.sort((a, b) => (below.get(b.i) || 0) - (below.get(a.i) || 0));
+  const discs = order.map((p) => discSVG(p, (own.has(p.i) ? 5.5 : 2.6 + 0.9 * Math.sqrt(below.get(p.i))) * u, u, own.has(p.i) ? ' own' : ' below')).join('');
+  const n = keys.size;
+  $('h4 .hint', sec).textContent = `${n} place${n === 1 ? '' : 's'}`;
+  $('.minimap', sec).innerHTML = `
+    <a class="minimap-map" href="${go('/atlas?' + new URLSearchParams({ place: pts.length === 1 ? pts[0].key : order[0].key }))}" aria-label="Open in the atlas">
+      <svg class="atlas mini" viewBox="${cx - w / 2} ${cy - h / 2} ${w} ${h}" role="img" aria-label="Map of where this motif is attested">${baseSVG(geo, 'mini-sheet')}<g>${discs}</g></svg></a>
+    <div class="minimap-key">
+      ${own.size ? '<span><i class="key own"></i>its own traditions</span>' : ''}
+      ${below.size ? `<span><i class="key below"></i>traditions of the motifs filed under it</span>` : ''}
+      <a href="${go('/atlas?' + new URLSearchParams({ place: order[0].key }))}">open the atlas →</a>
+    </div>`;
+  sec.hidden = false;
+}
+
+async function viewAtlas() {
+  const params = route().params;
+  const state = { q: params.get('q') || '', branch: params.get('in') || '', place: params.get('place') || '' };
+  document.title = 'Atlas · Spindle';
+  main.innerHTML = `<div class="wrap atlas-page fade-in">
+    <div class="atlas-main">
+      <header class="atlas-head">
+        <h1>Atlas</h1>
+        <p class="lede">Where Thompson’s sources tell each motif. Every disc is a tradition his references name — the Ekoi, the Tuamotu islanders, Iceland — sized by how many motifs cite it.</p>
+      </header>
+      <div class="atlas-map">
+        <div class="loading map-loading">${whorl()} unfolding the atlas…</div>
+        <div class="atlas-zoom"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">−</button><button type="button" data-z="reset" aria-label="Show the whole world">⟲</button></div>
+        <div class="map-tip"></div>
+      </div>
+      <div class="atlas-notes">
+        <div class="atlas-key">
+          <span><svg viewBox="-6 -6 12 12"><circle class="disc k-p" r="5"/></svg>a people or place</span>
+          <span><svg viewBox="-6 -6 12 12"><circle class="disc k-b" r="5"/></svg>a whole region (“African”, “Polynesian”)</span>
+          <span><svg viewBox="-6 -6 12 12"><circle class="disc k-t" r="4.2"/></svg>a written or religious tradition (“Jewish”, “Italian Novella”)</span>
+        </div>
+        <p>This is a map of Thompson’s library, not of the world’s storytelling. India, Ireland and Iceland loom large because he drew on rich collections from them — Indian story books, the Irish myth index of Cross, the Icelandic sagas — while whole continents are known to the index through a handful of books. A motif with no disc somewhere is not absent there; Thompson simply had no source for it.</p>
+        <p class="muted">Coastlines from Natural Earth. Places are approximate: where the tales were collected, as Thompson’s sources describe it.</p>
+      </div>
     </div>
-    <div class="map-tip"></div>
-    <div class="map-hint">scroll to zoom · drag to pan · click a point to open it</div>
-    <div class="loading map-loading">${whorl()} unrolling the map…</div>
+    <aside class="atlas-panel">
+      <form class="atlas-search"><input type="search" placeholder="Where is it told? e.g. a dragon guards a treasure" aria-label="Find where a motif is told" value="${esc(state.q)}"></form>
+      <select class="atlas-branch" aria-label="Branch of the index"><option value="">All branches</option></select>
+      <div class="atlas-detail" aria-live="polite"></div>
+    </aside>
   </div>`;
   hydrateArt(main);
-  const page = $('.map-page', main);
-  const canvas = $('canvas', page);
-  const tip = $('.map-tip', page);
-  const { buf, rows } = await store.mapData();
-  $('.map-loading', page).remove();
-  const n = rows.length;
-  const dv = new DataView(buf);
-  const X = new Float32Array(n), Y = new Float32Array(n), C = new Uint8Array(n);
-  for (let i = 0; i < n; i++) {
-    X[i] = dv.getUint16(i * 5, true) / 65535;
-    Y[i] = dv.getUint16(i * 5 + 2, true) / 65535;
-    C[i] = dv.getUint8(i * 5 + 4);
-  }
-  const G = 128;
-  const grid = Array.from({ length: G * G }, () => []);
-  for (let i = 0; i < n; i++) grid[Math.min(G - 1, (Y[i] * G) | 0) * G + Math.min(G - 1, (X[i] * G) | 0)].push(i);
+  const page = $('.atlas-page', main);
+  const box = $('.atlas-map', page), panel = $('.atlas-detail', page), tip = $('.map-tip', page);
+  const [ix, at] = await Promise.all([store.index(), store.atlas()]);
+  const { geo, places } = at;
+  box.style.setProperty('--ar', `${geo.w} / ${geo.h}`);
+  $('.atlas-branch', page).insertAdjacentHTML('beforeend', LETTERS.map((L) => `<option value="${L}"${state.branch === L ? ' selected' : ''}>${L} · ${esc(ix.categories[L])}</option>`).join(''));
+  box.insertAdjacentHTML('afterbegin', `<svg class="atlas" role="img" aria-label="World map of the traditions Thompson cites">
+    ${baseSVG(geo, 'atlas-sheet')}<g class="figs">${await figuresSVG(geo)}</g><g class="discs"></g><circle class="sel-ring" r="0"/><g class="labels" aria-hidden="true"></g></svg>`);
+  $('.map-loading', box).remove();
+  const svg = $('svg.atlas', box);
+  const gDiscs = $('.discs', svg), gLabels = $('.labels', svg), ring = $('.sel-ring', svg);
 
-  const off = new Set();
-  let hi = null, hover = -1;
-  const view = { s: 1, tx: 0, ty: 0 };
-  let W = 0, H = 0, dpr = 1;
-  const pad = 40;
-  const base = () => Math.min(W, H) - pad * 2;
-  const toScreen = (x, y) => { const b = base(); return [(W - b) / 2 + x * b * view.s + view.tx, (H - b) / 2 + y * b * view.s + view.ty]; };
-  const toWorld = (sx, sy) => { const b = base(); return [(sx - view.tx - (W - b) / 2) / (b * view.s), (sy - view.ty - (H - b) / 2) / (b * view.s)]; };
-  const ctx = canvas.getContext('2d');
-  const colors = LETTERS.map((L) => CAT_COLORS[L]);
+  // ------------------------------------------------------------ counts
+  let matched = null, counts = [], total = 0;
+  const inScope = (row) => (!state.branch || ix.rows[row][0][0] === state.branch) && (!matched || matched.has(row));
+  function recount() {
+    counts = places.map((p) => p.rows.reduce((a, r) => a + inScope(r), 0));
+    total = ix.rows.reduce((a, _, r) => a + inScope(r), 0);
+  }
+
+  // -------------------------------------------------------------- view
+  const view = { x: geo.w / 2, y: geo.h / 2, z: 1 };
+  let cw = 1, ch = 1, s0 = 1;
+  const scale = () => s0 * view.z;
+  function clampView() {
+    const s = scale(), hw = cw / (2 * s), hh = ch / (2 * s);
+    view.x = hw * 2 >= geo.w ? geo.w / 2 : Math.min(geo.w - hw, Math.max(hw, view.x));
+    view.y = hh * 2 >= geo.h ? geo.h / 2 : Math.min(geo.h - hh, Math.max(hh, view.y));
+  }
   let raf = 0;
   function draw() {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => {
-      const css = getComputedStyle(document.documentElement);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = css.getPropertyValue('--paper');
-      ctx.fillRect(0, 0, W, H);
-      const r = Math.max(1.1, Math.min(4, 1.2 * Math.sqrt(view.s)));
-      ctx.globalAlpha = hi ? 0.18 : 0.72;
-      for (let c = 0; c < LETTERS.length; c++) {
-        if (off.has(LETTERS[c])) continue;
-        ctx.fillStyle = colors[c];
-        ctx.beginPath();
-        for (let i = 0; i < n; i++) {
-          if (C[i] !== c) continue;
-          const [sx, sy] = toScreen(X[i], Y[i]);
-          if (sx < -5 || sy < -5 || sx > W + 5 || sy > H + 5) continue;
-          ctx.rect(sx - r / 2, sy - r / 2, r, r);
-        }
-        ctx.fill();
+      clampView();
+      const s = scale(), u = 1 / s;
+      svg.setAttribute('viewBox', `${view.x - cw / (2 * s)} ${view.y - ch / (2 * s)} ${cw / s} ${ch / s}`);
+      svg.style.setProperty('--u', u);
+      const shrink = Math.min(1, Math.max(0.6, cw / 1000));
+      for (const el of gDiscs.querySelectorAll('circle')) {
+        const n = +el.dataset.n;
+        const r = discPx(n) * shrink * u;
+        el.setAttribute('r', r);
+        if (el.classList.contains('dshadow')) { el.setAttribute('cx', +el.dataset.x + 0.5 * u); el.setAttribute('cy', +el.dataset.y + 0.8 * u); }
       }
-      ctx.globalAlpha = 1;
-      if (hi) {
-        ctx.lineWidth = 1.5;
-        hi.forEach((i, rank) => {
-          const [sx, sy] = toScreen(X[i], Y[i]);
-          ctx.strokeStyle = css.getPropertyValue('--ink');
-          ctx.fillStyle = colors[C[i]];
-          ctx.beginPath(); ctx.arc(sx, sy, rank < 10 ? 5 : 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        });
-        ctx.font = '14px "EB Garamond", serif';
-        // label the best hits, skipping any label that would overlap one already placed
-        const placed = [];
-        let shown = 0;
-        for (const i of hi) {
-          if (shown >= 10) break;
-          const [sx, sy] = toScreen(X[i], Y[i]);
-          const t = rows[i][1];
-          const label = t.length > 44 ? t.slice(0, 42) + '…' : t;
-          const w = ctx.measureText(label).width;
-          const box = [sx + 8, sy - 10, sx + 12 + w, sy + 6];
-          if (box[2] > W || placed.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) continue;
-          placed.push(box);
-          ctx.fillStyle = css.getPropertyValue('--card');
-          ctx.globalAlpha = 0.85;
-          ctx.fillRect(box[0] - 2, box[1], box[2] - box[0], box[3] - box[1]);
-          ctx.globalAlpha = 1;
-          ctx.fillStyle = css.getPropertyValue('--ink');
-          ctx.fillText(label, sx + 9, sy + 3);
-          shown++;
-        }
-      }
-      if (hover >= 0) {
-        const [sx, sy] = toScreen(X[hover], Y[hover]);
-        ctx.strokeStyle = css.getPropertyValue('--red');
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.stroke();
-      }
+      const sel = state.place && at.byKey.get(state.place);
+      ring.setAttribute('r', sel ? (discPx(counts[sel.i] || 0) * shrink + 4) * u : 0);
+      if (sel) { ring.setAttribute('cx', sel.x); ring.setAttribute('cy', sel.y); }
+      labels(s, shrink);
     });
   }
+  function drawDiscs() {
+    const order = places.filter((p) => counts[p.i] > 0).sort((a, b) => counts[b.i] - counts[a.i]);
+    gDiscs.innerHTML = order.map((p) => {
+      const n = counts[p.i];
+      return `<circle class="dshadow" data-n="${n}" data-x="${p.x}" data-y="${p.y}" cx="${p.x}" cy="${p.y}" r="0"/>` +
+        `<circle class="disc k-${p.kind}" data-i="${p.i}" data-n="${n}" cx="${p.x}" cy="${p.y}" r="0"/>`;
+    }).join('');
+    draw();
+  }
+  // name the biggest discs in view, skipping any name that would collide
+  function labels(s, shrink) {
+    const x0 = view.x - cw / (2 * s), y0 = view.y - ch / (2 * s);
+    const placed = [];
+    const out = [];
+    const cand = places.filter((p) => counts[p.i] > 0).sort((a, b) => counts[b.i] - counts[a.i]);
+    for (const p of cand) {
+      if (out.length >= 26) break;
+      const sx = (p.x - x0) * s, sy = (p.y - y0) * s;
+      if (sx < 0 || sy < 0 || sx > cw || sy > ch) continue;
+      const r = discPx(counts[p.i]) * shrink;
+      const w = p.name.length * 6.6 + 4;
+      const b = [sx + r + 2, sy - 8, sx + r + 4 + w, sy + 7];
+      if (b[2] > cw) { b[0] = sx - r - 4 - w; b[2] = sx - r - 2; }
+      if (placed.some((q) => !(b[2] < q[0] || b[0] > q[2] || b[3] < q[1] || b[1] > q[3]))) continue;
+      placed.push(b);
+      out.push(`<text x="${x0 + b[0] / s}" y="${y0 + (sy + 4.5) / s}">${esc(p.name)}</text>`);
+    }
+    gLabels.innerHTML = out.join('');
+  }
   const resize = () => {
-    dpr = window.devicePixelRatio || 1;
-    W = page.clientWidth; H = page.clientHeight;
-    canvas.width = W * dpr; canvas.height = H * dpr;
+    cw = box.clientWidth; ch = box.clientHeight;
+    s0 = Math.max(cw / geo.w, ch / geo.h);
     draw();
   };
-  function nearest(sx, sy) {
-    const [wx, wy] = toWorld(sx, sy);
-    const gx = (wx * G) | 0, gy = (wy * G) | 0;
-    let best = -1, bd = Infinity;
-    const rad = Math.max(1, Math.ceil(2 / view.s));
-    for (let y = gy - rad; y <= gy + rad; y++) for (let x = gx - rad; x <= gx + rad; x++) {
-      if (x < 0 || y < 0 || x >= G || y >= G) continue;
-      for (const i of grid[y * G + x]) {
-        if (off.has(LETTERS[C[i]])) continue;
-        const [px, py] = toScreen(X[i], Y[i]);
-        const d = (px - sx) ** 2 + (py - sy) ** 2;
-        if (d < bd) { bd = d; best = i; }
-      }
-    }
-    return bd < 144 ? best : -1;
+
+  // ------------------------------------------------------------- panel
+  function sync() {
+    const p = new URLSearchParams();
+    if (state.q) p.set('q', state.q);
+    if (state.branch) p.set('in', state.branch);
+    if (state.place) p.set('place', state.place);
+    history.replaceState(null, '', go('/atlas' + (p.toString() ? '?' + p : '')));
   }
-  let drag = null;
-  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty, moved: false }; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
-    if (drag) {
-      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
-      view.tx = drag.tx + dx; view.ty = drag.ty + dy;
-      tip.style.display = 'none';
+  const scopeText = () => [state.branch ? `in ${state.branch} · ${esc(ix.categories[state.branch])}` : '', matched ? `among the ${matched.size} closest matches to <i>${esc(state.q)}</i>` : ''].filter(Boolean).join(', ');
+  function overview() {
+    const top = places.filter((p) => counts[p.i] > 0).sort((a, b) => counts[b.i] - counts[a.i]);
+    const max = counts[top[0]?.i] || 1;
+    const placedRows = new Set(top.flatMap((p) => p.rows.filter(inScope)));
+    panel.innerHTML = `
+      <h2>${matched ? 'Where it is told' : 'Most cited'}</h2>
+      <p class="muted scope">${top.length ? `${fmt(top.length)} places${scopeText() ? ', ' + scopeText() : ''}. ${total - placedRows.size ? `${fmt(total - placedRows.size)} of ${fmt(total)} motifs name no tradition.` : ''}` : 'No motif here names a tradition.'}</p>
+      <ol class="place-list">${top.slice(0, 40).map((p) => `<li><button type="button" data-key="${esc(p.key)}">
+        <span class="pname">${esc(p.name)}${p.kind !== 'p' ? ` <span class="pkind">${p.kind === 'b' ? 'region' : 'tradition'}</span>` : ''}</span>
+        <span class="n">${fmt(counts[p.i])}</span><i style="width:${(100 * counts[p.i]) / max}%"></i></button></li>`).join('')}</ol>`;
+  }
+  function detail(p) {
+    const rows = p.rows.filter(inScope);
+    const byL = new Map();
+    for (const r of rows) { const L = ix.rows[r][0][0]; if (!byL.has(L)) byL.set(L, []); byL.get(L).push(r); }
+    const ls = [...byL.entries()].sort((a, b) => b[1].length - a[1].length);
+    const max = ls[0]?.[1].length || 1;
+    panel.innerHTML = `
+      <button type="button" class="back">← all places</button>
+      <h2>${esc(p.name)}</h2>
+      ${KIND_NOTE[p.kind] ? `<p class="kind-note">${KIND_NOTE[p.kind]}</p>` : ''}
+      <p class="scope"><b>${fmt(rows.length)}</b> motif${rows.length === 1 ? '' : 's'} cite it${scopeText() ? ', ' + scopeText() : ''}.</p>
+      <p class="labels-line"><span class="muted">Thompson’s label${p.labels.length === 1 ? '' : 's'}:</span> ${p.labels.slice(0, 8).map((l) => `<a class="chip" href="${searchHref({ culture: l })}" title="Search within these motifs">${esc(l)}</a>`).join(' ')}${p.labels.length > 8 ? ` <span class="muted">and ${p.labels.length - 8} more</span>` : ''}</p>
+      <div class="br-list">${ls.map(([L, rs]) => `
+        <div class="br"><button type="button" class="br-head" data-l="${L}" aria-expanded="false">
+          <span class="fart" data-art="${L}"></span><span class="bname">${L} · ${esc(SHORT[L])}</span><span class="n">${fmt(rs.length)}</span><i style="width:${(100 * rs.length) / max}%"></i></button>
+          <div class="br-motifs" hidden></div></div>`).join('')}</div>`;
+    hydrateArt(panel);
+    panel._byL = byL;
+  }
+  function renderPanel() {
+    const p = state.place && at.byKey.get(state.place);
+    if (p) detail(p); else overview();
+  }
+  function motifRows(list, from) {
+    return list.slice(from, from + 50).map((r) => `<li><a class="mid" href="${motifHref(ix.rows[r][0])}">${esc(ix.rows[r][0])}</a> <a href="${motifHref(ix.rows[r][0])}">${esc(ix.rows[r][1])}</a></li>`).join('');
+  }
+  panel.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.key) { select(b.dataset.key, { centre: true }); return; }
+    if (b.classList.contains('back')) { select(''); return; }
+    if (b.classList.contains('br-head')) {
+      const list = b.nextElementSibling;
+      const open = b.getAttribute('aria-expanded') !== 'true';
+      b.setAttribute('aria-expanded', String(open));
+      if (open && !list.innerHTML) {
+        const rs = [...panel._byL.get(b.dataset.l)].sort(matched ? (x, y) => matched.get(x) - matched.get(y) : (x, y) => (ix.rows[x][0] < ix.rows[y][0] ? -1 : 1));
+        list.innerHTML = `<ul class="mlist plain">${motifRows(rs, 0)}</ul>${rs.length > 50 ? `<button type="button" class="facet-more" data-from="50">${fmt(rs.length - 50)} more…</button>` : ''}`;
+        list._rows = rs;
+      }
+      list.hidden = !open;
+      return;
+    }
+    if (b.dataset.from) {
+      const list = b.closest('.br-motifs');
+      const from = +b.dataset.from;
+      $('ul', list).insertAdjacentHTML('beforeend', motifRows(list._rows, from));
+      if (from + 50 < list._rows.length) { b.dataset.from = from + 50; b.textContent = `${fmt(list._rows.length - from - 50)} more…`; } else b.remove();
+    }
+  });
+  function select(key, { centre = false } = {}) {
+    state.place = key;
+    sync();
+    renderPanel();
+    const p = key && at.byKey.get(key);
+    if (p && centre) { view.x = p.x; view.y = p.y; view.z = Math.max(view.z, 2.2); }
+    draw();
+    if (p && !matchMedia('(min-width: 1001px)').matches) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ------------------------------------------------------- interaction
+  const pointers = new Map();
+  let drag = null, pinch = null;
+  svg.addEventListener('pointerdown', (e) => {
+    pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    svg.setPointerCapture(e.pointerId);
+    if (pointers.size === 1) drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: view.z };
+      drag = null;
+    }
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      view.z = Math.min(14, Math.max(1, pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d));
       draw();
       return;
     }
-    const i = nearest(sx, sy);
-    if (i !== hover) { hover = i; draw(); }
-    if (i >= 0) {
-      tip.innerHTML = `<span class="mid">${esc(rows[i][0])}</span>${esc(rows[i][1])}`;
+    if (drag && pointers.size === 1) {
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+      if (drag.moved) {
+        view.x = drag.vx - dx / scale(); view.y = drag.vy - dy / scale();
+        tip.style.display = 'none';
+        draw();
+        return;
+      }
+    }
+    const c = e.target.closest?.('.disc');
+    if (c) {
+      const p = places[+c.dataset.i];
+      const rect = box.getBoundingClientRect();
+      tip.innerHTML = `<b>${esc(p.name)}</b><span class="muted"> · ${fmt(counts[p.i])} motif${counts[p.i] === 1 ? '' : 's'}</span>`;
       tip.style.display = 'block';
-      tip.style.left = Math.min(W - tip.offsetWidth - 10, sx + 14) + 'px';
-      tip.style.top = (sy + 14) + 'px';
+      tip.style.left = Math.min(rect.width - tip.offsetWidth - 8, e.clientX - rect.left + 14) + 'px';
+      tip.style.top = (e.clientY - rect.top + 14) + 'px';
     } else tip.style.display = 'none';
   });
-  canvas.addEventListener('pointerup', () => {
-    const wasDrag = drag?.moved;
-    drag = null;
-    if (!wasDrag && hover >= 0) navigate(motifHref(rows[hover][0]));
-  });
-  canvas.addEventListener('wheel', (e) => {
+  const up = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinch = null;
+    if (drag && !drag.moved && pointers.size === 0) {
+      const c = e.target.closest?.('.disc');
+      if (c) select(places[+c.dataset.i].key);
+    }
+    if (pointers.size === 0) drag = null;
+  };
+  svg.addEventListener('pointerup', up);
+  svg.addEventListener('pointercancel', up);
+  svg.addEventListener('pointerleave', () => { tip.style.display = 'none'; });
+  svg.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
+    const rect = svg.getBoundingClientRect();
     const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
-    const [wx, wy] = toWorld(sx, sy);
-    view.s = Math.min(60, Math.max(0.7, view.s * Math.exp(-e.deltaY * 0.0015)));
-    const [nx, ny] = toScreen(wx, wy);
-    view.tx += sx - nx; view.ty += sy - ny;
+    const s = scale();
+    const wx = view.x - cw / (2 * s) + sx / s, wy = view.y - ch / (2 * s) + sy / s;
+    view.z = Math.min(14, Math.max(1, view.z * Math.exp(-e.deltaY * 0.0015)));
+    const s2 = scale();
+    view.x = wx - sx / s2 + cw / (2 * s2); view.y = wy - sy / s2 + ch / (2 * s2);
     draw();
   }, { passive: false });
-  $('.map-legend', page).addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    const L = b.dataset.l;
-    if (e.altKey || e.metaKey) {
-      const solo = off.size === LETTERS.length - 1 && !off.has(L);
-      off.clear();
-      if (!solo) LETTERS.forEach((x) => x !== L && off.add(x));
-    } else if (off.has(L)) off.delete(L);
-    else off.add(L);
-    $$('.map-legend button', page).forEach((x) => x.classList.toggle('off', off.has(x.dataset.l)));
+  $('.atlas-zoom', box).addEventListener('click', (e) => {
+    const z = e.target.closest('button')?.dataset.z;
+    if (z === 'in') view.z = Math.min(14, view.z * 1.6);
+    if (z === 'out') view.z = Math.max(1, view.z / 1.6);
+    if (z === 'reset') { view.z = 1; view.x = geo.w / 2; view.y = geo.h / 2; }
     draw();
   });
-  const input = $('.map-search input', page);
+  $('.atlas-branch', page).addEventListener('change', (e) => {
+    state.branch = e.target.value;
+    sync(); recount(); drawDiscs(); renderPanel();
+  });
+  const input = $('.atlas-search input', page);
   input.addEventListener('focus', store.warm, { once: true });
-  $('.map-search', page).addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const q = input.value.trim();
-    if (!q) { hi = null; draw(); return; }
-    input.disabled = true;
+  let stopModel = null;
+  async function runQuery() {
+    if (!state.q) { matched = null; recount(); drawDiscs(); renderPanel(); return; }
+    panel.innerHTML = `<div class="loading">${whorl()} <span class="msg">searching the index…</span></div>`;
+    hydrateArt(panel);
+    stopModel?.();
+    stopModel = store.onModel((m) => {
+      const msg = $('.loading .msg', panel);
+      if (msg && m.status === 'loading') msg.textContent = 'loading the language model — once, then searches take a moment…';
+    });
     try {
-      const d = await store.search(q, { k: 150 });
-      hi = d.results.map((r) => ix.row.get(r.id)).filter((i) => i != null);
-    } finally { input.disabled = false; input.focus(); }
-    if (hi.length) {
-      const top = hi.slice(0, 15);
-      const cx = top.reduce((s, i) => s + X[i], 0) / top.length, cy = top.reduce((s, i) => s + Y[i], 0) / top.length;
-      view.s = Math.max(view.s, 2.5);
-      const [sx, sy] = toScreen(cx, cy);
-      view.tx += W / 2 - sx; view.ty += H / 2 - sy;
-    }
-    draw();
+      // the same sixty the search page shows; further down the list, matches thin out
+      // into motifs that only crowd the places Thompson had most sources for
+      const d = await store.search(state.q, { k: 60 });
+      matched = new Map(d.results.map((r, k) => [ix.row.get(r.id), k]).filter(([i]) => i != null));
+    } catch (err) {
+      panel.innerHTML = `<p class="muted">${esc(err.message)}</p>`;
+      return;
+    } finally { stopModel?.(); stopModel = null; }
+    recount(); drawDiscs(); renderPanel();
+  }
+  $('.atlas-search', page).addEventListener('submit', (e) => {
+    e.preventDefault();
+    state.q = input.value.trim();
+    sync();
+    runQuery();
   });
-  input.addEventListener('input', (e) => { if (!e.target.value) { hi = null; draw(); } });
+  input.addEventListener('input', () => { if (!input.value && state.q) { state.q = ''; sync(); runQuery(); } });
+
   const ro = new ResizeObserver(resize);
-  ro.observe(page);
-  window.addEventListener('themechange', draw);
-  const mq = matchMedia('(prefers-color-scheme: dark)');
-  mq.addEventListener('change', draw);
+  ro.observe(box);
   resize();
-  return () => { ro.disconnect(); window.removeEventListener('themechange', draw); mq.removeEventListener('change', draw); };
+  recount();
+  drawDiscs();
+  const first = state.place && at.byKey.get(state.place);
+  if (first) { view.x = first.x; view.y = first.y; view.z = 2.2; }
+  renderPanel();
+  if (state.q) runQuery();
+  return () => { ro.disconnect(); stopModel?.(); };
 }
 
 // ---------------------------------------------------------------- about
@@ -794,6 +967,7 @@ async function viewMap() {
 async function viewAbout() {
   document.title = 'About · Spindle';
   const ix = await store.index();
+  const at = await store.atlas();
   main.innerHTML = `<article class="wrap about fade-in">
     <h1>About Spindle</h1>
     <p>Stith Thompson’s <i>Motif-Index of Folk-Literature</i> (1932–36; revised and enlarged 1955–58) classifies the recurring elements of traditional narrative — the swan maiden, the forbidden chamber, the trickster who feigns death — into a tree of some ${fmt(ix.n)} numbered motifs, each with a trail of references to the collections where it occurs. It remains the common language of folk-narrative research, and it remains hard to search: a motif is found only if one guesses Thompson’s wording, or the branch he filed it under.</p>
@@ -808,6 +982,7 @@ async function viewAbout() {
       <li><b>Meaning.</b> Every motif’s headline and note were embedded with a sentence encoder and stored compactly (256 dimensions, one byte each). When you search, your browser downloads the same encoder once (about 110 MB, then cached), embeds your description, and compares it with all motifs in a few milliseconds. For one- and two-word queries exact word matches count for a little more, and a name found in no headline is looked up in the references — which is how <a href="${searchHref({ q: 'Melusine' })}">Melusine</a> finds the Melusine tabu.</li>
       <li><b>Trained on tale summaries.</b> The encoder, <code>bge-base-en-v1.5</code>, was fine-tuned on some 1,800 plot fragments from the tale-type summaries of the Aarne–Thompson–Uther index, each with the motif cited for it (“…he falls into a magic sleep [D1975]”), from Joshua Hagedorn’s <a href="https://github.com/j-hagedorn/trilogy">trilogy</a> datasets. It has learned how stories put what Thompson puts tersely.</li>
       <li><b>In plain words.</b> For every motif a language model (Claude Haiku) wrote one or two plain sentences and a few phrases one might search with. These count as a second description of the motif when you search, and are shown on motif pages marked <i>In plain words</i>. They are generated, not Thompson’s, and can be wrong in detail.</li>
+      <li><b>The atlas.</b> Each tradition is placed where its tales were collected — the Ekoi on the Cross River, the Toba in the Gran Chaco — ${fmt(at.places.length)} places in all, from a gazetteer written for Spindle. Labels for a whole region (“African”, “Polynesian”) and written or religious traditions (“Jewish”, “Italian Novella”) are drawn differently from peoples and places. The <a href="${go('/atlas')}">atlas</a> shows what Thompson’s sources cover, not where a motif is or is not told; coastlines are from <a href="https://www.naturalearthdata.com/">Natural Earth</a>.</li>
       <li><b>Echoes.</b> On every motif page, Spindle lists the most similar motifs that Thompson filed in other branches — the duplications and near-duplications he himself acknowledged (<a href="${motifHref('D1645.9')}">D1645.9</a> and <a href="${motifHref('F718.5')}">F718.5</a>), and many he did not.</li>
     </ul>
 

@@ -951,12 +951,150 @@ def hero():
     write("hero", W, 360, ink, holes, acc_full)
 
 
+# ---------------------------------------------------------------- atlas: figures in the sea
+def waves(x0, x1, y, step=10.0, amp=5.0, depth=6.0):
+    """A band of scalloped water, crests up, from x0 to x1 with its crest line at y.
+    Returns (ink, holes): the band, and a cut along it."""
+    d = f"M{n(x0)},{n(y + depth)} L{n(x0)},{n(y)}"
+    cut = f"M{n(x0 + step * .2)},{n(y + depth * .55)}"
+    x = x0
+    while x < x1 - 1e-6:
+        w = min(step, x1 - x)
+        d += f" Q{n(x + w / 2)},{n(y - amp)} {n(x + w)},{n(y)}"
+        x += w
+    d += f" L{n(x1)},{n(y + depth)} Z"
+    x = x0 + step * .2
+    while x < x1 - step * .7:
+        cut += f" Q{n(x + step * .3)},{n(y + depth * .55 - amp * .35)} {n(x + step * .6)},{n(y + depth * .55)}"
+        cut += f" M{n(x + step)},{n(y + depth * .55)}"
+        x += step
+    return P(d), CUT(cut, 1.1)
+
+
+def spikes(pts, t_list, side, L, W):
+    """Little triangular spikes standing out from a cubic curve."""
+    out = ""
+    for t in t_list:
+        x, y = bez(*pts, t)
+        dx, dy = dbez(*pts, t)
+        l = math.hypot(dx, dy) or 1
+        nx, ny = -dy / l * side, dx / l * side
+        ux, uy = dx / l, dy / l
+        out += P(poly([(x - ux * W, y - uy * W), (x + nx * L - ux * W * .6, y + ny * L - uy * W * .6), (x + ux * W, y + uy * W)]))
+    return out
+
+
+def atlas_serpent():
+    neck = ((44, 62), (42, 40), (32, 22), (19, 20))
+    hump1 = ((60, 62), (62, 22), (94, 22), (96, 62))
+    hump2 = ((108, 62), (110, 32), (134, 32), (136, 62))
+    tail = ((146, 62), (150, 40), (162, 32), (166, 42))
+    ink = P(tapered(*neck, 13, 9)) + P(lens(10, 20, 28, 8, -0.12))
+    ink += P(tapered(*hump1, 11, 11, wf=lambda t: 9 + 3 * math.sin(math.pi * t)))
+    ink += P(tapered(*hump2, 9, 9, wf=lambda t: 8 + 2 * math.sin(math.pi * t)))
+    ink += P(tapered(*tail, 8, 2))
+    ink += P(leaf(166, 42, 1.2, 11, 4)) + P(leaf(166, 42, 2.4, 9, 3.5))
+    ink += spikes(neck, (0.45, 0.62, 0.78), 1, 11.5, 2.4) + spikes(hump1, (0.3, 0.42, 0.54, 0.66, 0.78), -1, 12, 2.6)
+    ink += spikes(hump2, (0.36, 0.5, 0.64), -1, 10.5, 2.2)
+    ink += P(leaf(17, 14, -2.2, 10, 2.6)) + P(leaf(21, 15, -1.75, 9, 2.4))   # horns
+    w_ink, w_holes = waves(28, 172, 60)
+    ink += w_ink
+    holes = H(circ(13, 17.8, 2)) + CUT("M-3,22 C3,24.5 9,24.5 15,22.5", 1.4)
+    for pts, ts in ((hump1, (0.2, 0.32, 0.44, 0.56, 0.68, 0.8)), (hump2, (0.25, 0.4, 0.55, 0.7)), (neck, (0.15, 0.3))):
+        for t in ts:
+            x, y = bez(*pts, t)
+            holes += H(circ(x, y, 1.15))
+    holes += w_holes + CUT("M28,60.2 L172,60.2", 1.2)
+    write("atlas-serpent", 180, 72, g(ink, "translate(8 0)"), g(holes, "translate(8 0)"), "")
+
+
+def atlas_whale():
+    body = "M10,58 C10,38 38,28 72,30 C104,32 126,42 140,54 C128,64 108,70 76,70 C40,70 10,72 10,58 Z"
+    ink = P(body)
+    ink += P(tapered((130, 57), (146, 50), (152, 40), (153, 30), 13, 5))
+    ink += P(lens(146, 24, 20, 5.5, -2.5)) + P(lens(161, 25, 20, 5.5, -0.65))
+    ink += P(lens(66, 69, 22, 5, 0.75))
+    for side in (-1, 1):
+        ink += P(tapered((40 + side * 1.5, 31), (40 + side * 2, 21), (40 + side * 7, 12), (40 + side * 13, 8), 3.4, 1.4))
+    w_ink, w_holes = waves(0, 172, 74)
+    ink += w_ink
+    holes = H(circ(29, 49, 2.3)) + CUT("M10,58 C22,61 38,61 50,57", 1.5)
+    for k in range(4):
+        holes += CUT(f"M{n(20 + k * 3)},{n(63 + k * 1.6)} C{n(40)},{n(66 + k * 1.6)} {n(70)},{n(66 + k * 1.4)} {n(96 - k * 6)},{n(64 + k * 1.2)}", 1.1)
+    for x, y in ((58, 37), (70, 36), (82, 37), (94, 39), (106, 42), (64, 43), (76, 42.5), (88, 44)):
+        holes += H(circ(x, y, 1.2))
+    holes += CUT("M146,24 L139,16", 1) + CUT("M161,25 L168,17", 1) + w_holes + CUT("M0,74.2 L172,74.2", 1.2)
+    acc = P(circ(25, 6, 2.2)) + P(circ(55, 6, 2.2)) + P(circ(33, 1.5, 1.7)) + P(circ(47, 1.5, 1.7)) + P(circ(40, 4.5, 1.5))
+    write("atlas-whale", 172, 82, g(ink, "translate(0 4)"), g(holes, "translate(0 4)"), g(acc, "translate(0 4)"))
+
+
+def atlas_ship():
+    ink = P("M14,80 L118,80 C112,95 100,101 84,101 L46,101 C30,101 20,95 14,80 Z")
+    ink += P("M12,80 L12,69 L32,69 L35,80 Z")
+    ink += P(tapered((114, 81), (124, 76), (130, 72), (136, 66), 3.4, 1.6))
+    for x, top, bot in ((68, 10, 80), (101, 24, 80), (24, 32, 69)):
+        ink += P(poly([(x - 1.3, bot), (x - 1.1, top), (x + 1.1, top), (x + 1.3, bot)]))
+    ink += P("M51,20 Q68,16 85,20 L83,38 Q68,42 53,38 Z") + P("M47,43 Q68,39 89,43 L87,67 Q68,72 49,67 Z")
+    ink += P("M90,33 Q101,30 112,33 L110,49 Q101,52 92,49 Z") + P("M89,53 Q101,50 114,53 L112,72 Q101,75 91,72 Z")
+    ink += P("M24,33 L24,64 L8,62 Z")
+    w_ink, w_holes = waves(0, 140, 102)
+    ink += w_ink
+    holes = CUT("M17,86 C40,88 92,88 115,86", 1.2) + CUT("M12,74 L33,74", 1)
+    for x in range(40, 100, 11):
+        holes += H(circ(x, 93, 1.9))
+    holes += H(heart(68, 55, 5.2)) + H(sparkle(68, 29, 4.5)) + H(sparkle(101, 41, 3.8)) + H(sparkle(101.5, 62, 4.2))
+    holes += CUT("M24,36 L13,60", 1) + w_holes + CUT("M0,102.2 L140,102.2", 1.2)
+    acc = P("M68,10 L80,13 L68,16.5 Z") + P("M101,24 L111,27 L101,30 Z") + P("M24,32 L32,34.5 L24,37 Z")
+    write("atlas-ship", 140, 112, ink, holes, acc)
+
+
+def atlas_compass():
+    cx, cy = 60, 70
+    # the ring is one even-odd path, so cutting it does not cut the star inside
+    ink = f'<path fill-rule="evenodd" d="{circ(cx, cy, 45)}{circ(cx, cy, 41)}"/>'
+    holes = ""
+    for k in range(32):
+        if k % 8 == 0:
+            continue  # where the long points cross the ring
+        a = k * math.pi / 16
+        holes += H(circ(cx + 43 * math.cos(a), cy + 43 * math.sin(a), 1.3 if k % 4 == 0 else 0.8))
+    for k in range(8):
+        a = -math.pi / 2 + k * math.pi / 4
+        L, w = (56, 8) if k % 2 == 0 else (34, 6)
+        tip = (cx + L * math.cos(a), cy + L * math.sin(a))
+        s1 = (cx + w * math.cos(a + math.pi / 2), cy + w * math.sin(a + math.pi / 2))
+        s2 = (cx + w * math.cos(a - math.pi / 2), cy + w * math.sin(a - math.pi / 2))
+        ink += P(poly([s1, tip, s2, (cx, cy)]))
+        # one half of each point cut away, as on old compass roses
+        half = [s1, tip, (cx, cy)]
+        holes += H(poly([((x - cx) * .78 + cx + (tip[0] - cx) * .1, (y - cy) * .78 + cy + (tip[1] - cy) * .1) for x, y in half]))
+    holes += H(circ(cx, cy, 4.2)) + K(circ(cx, cy, 2))
+    acc = P(tulip(cx, cy - 57, 8))
+    write("atlas-compass", 120, 130, ink, holes, acc)
+
+
+def atlas_isle():
+    ink = P("M4,72 C18,62 34,55 60,53 C86,55 102,62 116,72 Z")
+    m_ink, m_holes, m_acc = mole()
+    tr = "translate(56 56) scale(0.52)"
+    ink += g(m_ink, tr)
+    ink += P(poly([(87.4, 60), (87.6, 33), (88.6, 33), (88.8, 60)])) + P(sparkle(104, 18, 5)) + P(sparkle(16, 30, 3.5))
+    w_ink, w_holes = waves(0, 120, 72, step=9, amp=4, depth=6)
+    ink += w_ink
+    holes = g(m_holes, tr) + w_holes + CUT("M0,72.2 L120,72.2", 1.1)
+    holes += H(circ(28, 66, 1.2)) + H(circ(96, 66, 1.2)) + H(circ(104, 69, 1)) + H(circ(18, 69, 1))
+    acc = g(m_acc, tr) + P("M88.6,33 L99,36.5 L88.6,40 Z")
+    write("atlas-isle", 120, 80, ink, holes, acc)
+
+
 if __name__ == "__main__":
     which = sys.argv[1:] or None
     fns = {k[7:]: v for k, v in globals().items() if k.startswith("emblem_")}
     for k, f in fns.items():
         if not which or k in which:
             f()
-    for k, f in (("spindle", spindle_logo), ("owl-empty", owl_empty), ("divider", divider), ("corner", corner), ("hero", hero)):
+    for k, f in (("spindle", spindle_logo), ("owl-empty", owl_empty), ("divider", divider), ("corner", corner), ("hero", hero),
+                 ("atlas-serpent", atlas_serpent), ("atlas-whale", atlas_whale), ("atlas-ship", atlas_ship),
+                 ("atlas-compass", atlas_compass), ("atlas-isle", atlas_isle)):
         if not which or k in which:
             f()

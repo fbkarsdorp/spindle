@@ -1,11 +1,10 @@
-"""Embed every motif and lay out the 2-D map.
+"""Embed every motif with the stock encoder.
 
-    uv run python pipeline/index.py [--skip-map]
+    uv run python pipeline/index.py
 
-Output in data/index/: tmi.json, ids.json, emb0.npy (bge-base-en-v1.5), coords.npy, meta.json
+Output in data/index/: tmi.json, ids.json, emb0.npy (bge-base-en-v1.5), meta.json
 """
 
-import argparse
 import json
 import shutil
 import sys
@@ -51,10 +50,6 @@ def embed(motifs):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--skip-map", action="store_true")
-    args = ap.parse_args()
-
     OUT.mkdir(parents=True, exist_ok=True)
     shutil.copy(BUILD / "tmi.json", OUT / "tmi.json")
     data = json.load(open(OUT / "tmi.json"))
@@ -64,16 +59,6 @@ def main():
 
     E = embed(motifs)
     np.save(OUT / "emb0.npy", E.astype(np.float16))
-
-    if not args.skip_map:
-        import umap
-
-        t0 = time.time()
-        reducer = umap.UMAP(n_neighbors=25, min_dist=0.05, metric="cosine", random_state=7)
-        xy = reducer.fit_transform(E.astype(np.float32))
-        xy = (xy - xy.min(0)) / (xy.max(0) - xy.min(0))
-        np.save(OUT / "coords.npy", xy.astype(np.float32))
-        print(f"umap in {time.time() - t0:.0f}s", file=sys.stderr)
 
     json.dump({"model": MODEL, "count": len(ids)}, open(OUT / "meta.json", "w"), indent=1)
     print(f"index written to {OUT}", file=sys.stderr)

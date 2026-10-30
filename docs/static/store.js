@@ -210,7 +210,39 @@ export async function search(query, { k = 60 } = {}) {
   return { results: items, facets, filters, ms: performance.now() - t0 };
 }
 
-export async function mapData() {
-  const [ix, buf] = await Promise.all([index(), fetchBuffer('map.bin')]);
-  return { buf, rows: ix.rows };
+// ------------------------------------------------------------------- atlas
+
+let atlasP = null;
+/** The world map, its places, and which motifs each place's traditions cite. */
+export const atlas = () => (atlasP ??= Promise.all([index(), fetchJSON('atlas.json')]).then(([ix, geo]) => {
+  const places = geo.places.map(([key, name, kind, x, y], i) => ({ i, key, name, kind, x, y, labels: [], rows: [] }));
+  geo.culture_place.forEach((p, c) => { if (p >= 0) places[p].labels.push(ix.meta.cultures[c]); });
+  // each motif once per place, however many of its traditions fall there
+  const rowPlaces = ix.rows.map((r, row) => {
+    const ps = [...new Set(r[ROW.cultures].map((c) => geo.culture_place[c]).filter((p) => p >= 0))];
+    ps.forEach((p) => places[p].rows.push(row));
+    return ps;
+  });
+  for (const p of places) {
+    // most frequent label first
+    const n = (l) => ix.meta.culture_counts[ix.meta.cultures.indexOf(l)] || 0;
+    p.labels.sort((a, b) => n(b) - n(a));
+  }
+  return { geo, places, rowPlaces, byKey: new Map(places.map((p) => [p.key, p])) };
+}));
+
+/** Places of a motif's own traditions, and of the motifs filed below it. */
+export async function motifPlaces(id) {
+  const [ix, at] = await Promise.all([index(), atlas()]);
+  const own = new Map(), below = new Map();
+  const node = ix.node(id);
+  if (node?.kind === 'motif') at.rowPlaces[node.row].forEach((p) => own.set(p, 1));
+  const stack = [...(ix.children[id] || [])];
+  while (stack.length) {
+    const c = stack.pop();
+    const n = ix.node(c);
+    if (n?.kind === 'motif') at.rowPlaces[n.row].forEach((p) => below.set(p, (below.get(p) || 0) + 1));
+    stack.push(...(ix.children[c] || []));
+  }
+  return { at, own, below };
 }

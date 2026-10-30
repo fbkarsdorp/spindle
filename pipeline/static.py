@@ -13,8 +13,8 @@ plain-language reading, and scores its better match. Files:
   motifs.json       per motif: id, title, note, parent, cultures, regions, types, cross-references
   tree.json         categories and sections: id, title, parent; plus every node's children in order
   refs/X.json       references and precomputed neighbours ('echoes' and 'kin') per branch letter
-  map.bin           per motif: uint16 x, uint16 y, uint8 branch (the 2-D map)
   meta.json         counts, traditions, regions, model, calibration
+  atlas.json        the world map and where each tradition is (see atlas.py)
 """
 
 import argparse
@@ -170,14 +170,6 @@ def main():
     for L, recs in per_letter.items():
         json.dump(recs, open(OUT / "refs" / f"{L}.json", "w"), ensure_ascii=False, separators=(",", ":"))
 
-    # ----------------------------------------------------------------- map
-    letters = list(data["categories"])
-    xy = np.clip(np.load(INDEX / "coords.npy") * 65535, 0, 65535).astype("<u2")
-    rec = np.zeros(len(ids), dtype=[("x", "<u2"), ("y", "<u2"), ("c", "u1")])
-    rec["x"], rec["y"] = xy[:, 0], xy[:, 1]
-    rec["c"] = [letters.index(mid[0]) for mid in ids]
-    rec.tofile(OUT / "map.bin")
-
     # notable motifs for the 'at random' card
     notable = [i for i, m in enumerate(motifs)
                if m.get("note") and len(m.get("cultures", [])) >= 2 and len(m["title"]) < 90]
@@ -211,6 +203,10 @@ def main():
         "cultures": cultures, "culture_counts": [n for _, n in data["cultures"]],
         "regions": regions, "notable": notable,
     }, open(OUT / "meta.json", "w"), ensure_ascii=False, separators=(",", ":"))
+
+    from atlas import export as export_atlas
+
+    export_atlas(cultures, OUT)
 
     total = sum(f.stat().st_size for f in OUT.rglob("*") if f.is_file())
     print(f"wrote {OUT} ({total / 1e6:.1f} MB)", file=sys.stderr)

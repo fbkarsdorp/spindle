@@ -11,17 +11,19 @@ with no server.
 - **Motif pages** show the place in Thompson's tree, the traditions a motif is attested in (grouped by
   region), tale types, references with clickable cross-references, subdivisions, and **echoes**: similar
   motifs Thompson filed under other headings.
-- **Browse** the tree from A to Z, or wander a **map** on which motifs alike in meaning lie together.
+- **Browse** the tree from A to Z.
+- The **atlas** puts Thompson's traditions on a papercut world map: where his sources tell each motif,
+  overall, by branch, or for the closest matches to a description. Motif pages show their own small map.
 
 ## Publishing on GitHub Pages
 
-Everything the site needs is in `docs/` (about 27 MB). Push the repository to GitHub, then under
+Everything the site needs is in `docs/` (about 44 MB). Push the repository to GitHub, then under
 *Settings → Pages* choose *Deploy from a branch*, branch `main`, folder `/docs`. Routes are hashes
 (`#/motif/D113.1.1`), so the site works under any sub-path.
 
 At search time the browser fetches two things from elsewhere: transformers.js (pinned, from
 jsDelivr) and Spindle's query encoder (int8 ONNX, about 110 MB, from Hugging Face, then cached by the
-browser). Browsing, motif pages, the map and motif numbers work without them. The model is too large
+browser). Browsing, motif pages, the atlas and motif numbers work without them. The model is too large
 for a GitHub repository (100 MB per file), and Hugging Face also carries the download traffic.
 
 To preview locally: `cd docs && python3 -m http.server 8642`.
@@ -32,7 +34,7 @@ To preview locally: `cd docs && python3 -m http.server 8642`.
 uv sync
 uv run python pipeline/parse.py    # ruthenia HTML  -> data/build/motifs.raw.json
 uv run python pipeline/build.py    # tree, traditions, cross-references -> data/build/tmi.json
-uv run python pipeline/index.py    # stock embeddings and 2-D map -> data/index/
+uv run python pipeline/index.py    # stock embeddings -> data/index/
 ```
 
 The search model and the plain-language readings (see below):
@@ -81,7 +83,20 @@ numbered motifs under the decade headings and ranges of Thompson's synopses. For
 synopses are missing from ruthenia, the headings come from the old MOMFER index.
 
 **Traditions.** Reference labels ("Irish myth:", "Icel.:", "N. A. Indian (Zuñi):") are normalised into
-about 1,100 traditions in 14 regions.
+about 960 traditions in 14 regions. A people named under a continental group belongs to that group's
+region ("Africa (Baluba)" is African, though *Alu* is a Solomon Islands people), short names match only
+as whole words (Passamaquoddy is not Assam), and the end of a previous sentence that clings to a label
+("Odin.) Icelandic") is dropped.
+
+**Atlas.** `pipeline/places.py` is a gazetteer of some 480 peoples and places with the spellings
+Thompson's sources use; it places 99.9% of all tradition tags. Each entry is a people or place, a broad
+region ("African", "Polynesian"), or a written or religious tradition ("Jewish", "Italian Novella"),
+set at its historical centre. `pipeline/atlas.py` projects Natural Earth's 1:50m land outlines (public
+domain; downloaded to `data/raw/naturalearth/`) with the Natural Earth projection centred on 11°E, so
+that the seam runs through the Pacific between Samoa and the Cook Islands, simplifies and softens the
+coastlines, and writes `docs/data/atlas.json` (150 kB). `static.py` runs it at the end. The figures
+in the sea (a serpent, a whale, a ship, a compass rose, and the mole on a far island where Tristan da
+Cunha is) are drawn by `tools/artgen.py`.
 
 **Search.** The browser embeds the query with Spindle's encoder (transformers.js), projects it onto
 256 principal components, and scores all motifs at once (`docs/static/search.js`). Every motif has two
@@ -173,6 +188,7 @@ docs/       the website (GitHub Pages)
             index.html, static/app.js (views), static/store.js (data), static/search.js (search), static/app.css
             art/   papercut illustrations          data/  exported by pipeline/static.py
 pipeline/   parse.py, build.py, index.py, static.py     build the data
+            places.py, atlas.py                         the gazetteer and the world map
             readings.py, finetune.py                    plain-language readings; training the encoder
             atu_bench.py, compare.py, devset.json, heldout.json, experiment.py   benchmarks and model comparison
 tools/      eval_static.mjs, compare.mjs   benchmarks in Node, using the site's search code
