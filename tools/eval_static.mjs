@@ -1,5 +1,5 @@
 // Benchmark the static site's search code with the browser model, in Node.
-//   node tools/eval_static.mjs [queries.json] [--dtype q8] [--lex 0.6]
+//   node tools/eval_static.mjs [queries.json] [--dtype q8] [--lex 0.6] [--data path/to/exported/data/]
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -12,7 +12,7 @@ const file = (f => f.startsWith('/') ? f : ROOT + f)(args.find((a) => a.endsWith
 const dtype = opt('--dtype', 'q8');
 const lexes = opt('--lex', 'auto').split(',').map((x) => (x === 'auto' ? null : +x));
 
-const D = ROOT + 'docs/data/';
+const D = (d => d.startsWith('/') ? d : ROOT + d)(opt('--data', 'docs/data/').replace(/\/?$/, '/'));
 const json = (f) => JSON.parse(readFileSync(D + f, 'utf8'));
 const buf = (f) => { const b = readFileSync(D + f); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
 const index = new Index({
@@ -21,7 +21,7 @@ const index = new Index({
 });
 let modelName = opt('--model', index.meta.model);
 if (modelName.startsWith('local:')) { modelName = modelName.slice(6); env.localModelPath = ROOT + 'docs/models/'; env.allowRemoteModels = false; }
-const extractor = await pipeline('feature-extraction', modelName, { dtype });
+const extractor = await pipeline('feature-extraction', modelName, { dtype, revision: index.meta.model_revision || 'main' });
 const embed = async (t) => (await extractor(t, { pooling: 'cls', normalize: true })).data;
 
 const queries = JSON.parse(readFileSync(file, 'utf8'));

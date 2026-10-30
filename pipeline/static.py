@@ -9,7 +9,7 @@ plain-language reading, and scores its better match. Files:
 
   vectors.i8        n (or 2n) × dims int8, PCA-projected, normalised and quantised embeddings:
                     Thompson's text for every motif, then (with readings) every reading
-  projection.f32    768 mean, then 768 × dims components, then dims dequantisation scales
+  projection.f32    the mean (the encoder's width, d0), then d0 × dims components, then dims dequantisation scales
   motifs.json       per motif: id, title, note, parent, cultures, regions, types, cross-references
   tree.json         categories and sections: id, title, parent; plus every node's children in order
   refs/X.json       references and precomputed neighbours ('echoes' and 'kin') per branch letter
@@ -86,13 +86,20 @@ def embed(model_name, texts, cache):
 
 
 def main():
+    global OUT
     ap = argparse.ArgumentParser()
     ap.add_argument("--dims", type=int, default=256)
     ap.add_argument("--model", default=BASE, help="encoder for the motif vectors (a local path or a model name)")
     ap.add_argument("--browser-model", default=BROWSER_MODEL,
                     help="the ONNX version of the same encoder that the browser loads (Hugging Face id)")
+    ap.add_argument("--browser-revision", default="main",
+                    help="the model's commit on Hugging Face; pinning it keeps browsers from pairing a cached older model with new vectors")
+    ap.add_argument("--confidence", default="5.0,0.8",
+                    help="centre,scale of the displayed confidence, on the z-score scale (midway between the median first and tenth result)")
     ap.add_argument("--readings", default=None, help="plain-language readings (.jsonl) to add as second vectors")
+    ap.add_argument("--out", default=str(OUT), help="where to write (another folder, to test a model without touching the site)")
     args = ap.parse_args()
+    OUT = Path(args.out)
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "refs").mkdir(exist_ok=True)
 
@@ -122,7 +129,7 @@ def main():
         V = E
     mean = V.mean(0)
     _, _, Vt = np.linalg.svd(V - mean, full_matrices=False)
-    P = Vt[: args.dims].T.astype(np.float32)  # 768 × dims
+    P = Vt[: args.dims].T.astype(np.float32)  # d0 × dims
     X = (V - mean) @ P
     X /= np.linalg.norm(X, axis=1, keepdims=True)
     scale = np.abs(X).max(0).astype(np.float32)
@@ -198,7 +205,8 @@ def main():
 
     json.dump({
         "culture_regions": culture_regions,
-        "count": len(ids), "dims": args.dims, "model": args.browser_model, "query_prompt": QUERY_PROMPT,
+        "count": len(ids), "dims": args.dims, "model": args.browser_model, "model_revision": args.browser_revision,
+        "confidence": [float(x) for x in args.confidence.split(",")], "query_prompt": QUERY_PROMPT,
         "second_vectors": bool(readings),
         "cultures": cultures, "culture_counts": [n for _, n in data["cultures"]],
         "regions": regions, "notable": notable,

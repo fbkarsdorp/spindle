@@ -31,8 +31,8 @@ export function parseQuery(q) {
   return { text: q.replace(FILTER_RE, ' ').replace(/\s+/g, ' ').trim(), filters: f };
 }
 
-// a display confidence from a z-score, calibrated on ATU development fragments:
-// the tenth result typically scores z ≈ 4.4, the first z ≈ 5.9
+// a display confidence from a z-score, calibrated per model on ATU development
+// fragments (meta.confidence: midway between the median first and tenth result)
 export const confidence = (z, centre = 5.0, scale = 0.8) => 1 / (1 + Math.exp(-(z - centre) / scale));
 
 export class Index {
@@ -51,10 +51,12 @@ export class Index {
   }
 
   setVectors(vectors, projection) {
-    const d0 = 768;
+    // the encoder's width (768 for bge-base, 384 for bge-small), from the projection's length:
+    // a mean of d0, then d0 × dims components, then dims scales
+    const d0 = (projection.length - this.dims) / (1 + this.dims);
     this.vectors = vectors; // Int8Array n × dims
     this.mean = projection.subarray(0, d0);
-    this.P = projection.subarray(d0, d0 + d0 * this.dims); // 768 × dims, row-major
+    this.P = projection.subarray(d0, d0 + d0 * this.dims); // d0 × dims, row-major
     this.scale = projection.subarray(d0 + d0 * this.dims);
   }
 
@@ -86,7 +88,7 @@ export class Index {
   project(q) {
     // (q - mean) · P, normalised; then folded with the dequantisation scales
     const d = this.dims, out = new Float32Array(d);
-    for (let j = 0; j < 768; j++) {
+    for (let j = 0; j < this.mean.length; j++) {
       const x = q[j] - this.mean[j];
       if (x === 0) continue;
       const base = j * d;
@@ -208,7 +210,7 @@ export class Index {
 
   /**
    * @param {string} query   free text, optionally with culture:/region:/in:/type: filters
-   * @param {(text: string) => Promise<Float32Array>} embed   query -> 768-d normalised vector
+   * @param {(text: string) => Promise<Float32Array>} embed   query -> normalised vector
    * @returns {Promise<{results: {row, score, via}[], filters}>}
    */
   async search(query, embed, { k = 60, lexWeight = null, refs = null } = {}) {
@@ -234,7 +236,7 @@ export class Index {
     const w = lexWeight ?? (nWords <= 2 ? 1.5 : 0);
     for (let i = 0; i < this.n; i++) z[i] += w * lex[i];
     const top = topK(z, k, mask);
-    let results = top.map((i) => ({ row: i, score: confidence(z[i]), via: 'meaning' }));
+    let results = top.map((i) => ({ row: i, score: confidence(z[i], ...(this.meta.confidence || [])), via: 'meaning' }));
 
     // A name that occurs in no headline or note may still occur in the
     // references ('Melusine' only in Köhler's Melusinensage): look there first.

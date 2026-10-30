@@ -61,6 +61,7 @@ function loadModel() {
     const files = new Map();
     const ex = await pipeline('feature-extraction', name, {
       dtype: 'q8',
+      revision: ix.meta.model_revision || 'main', // pinned, so a cached older model is never paired with new vectors
       device: 'wasm',
       progress_callback: (p) => {
         if (p.status === 'progress' && p.total) {

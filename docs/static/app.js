@@ -1232,7 +1232,7 @@ async function viewAbout() {
       <li><b>Tree.</b> Every motif is placed under its parent: the dotted subdivisions under their stems, the numbered motifs under Thompson’s own section headings (e.g. <span class="mid">D100–D199</span> <i>Transformation: man to animal</i>).</li>
       <li><b>Traditions.</b> The labels in the references (“Irish myth:”, “India:”, “N. A. Indian (Zuñi):”) are normalised into ${fmt(ix.meta.cultures.length)} traditions in ${ix.meta.regions.length} broad regions, so that results can be filtered by where a motif is attested.</li>
       <li><b>Meaning.</b> Every motif’s headline and note were embedded with a sentence encoder and stored compactly (256 dimensions, one byte each). When you search, your browser downloads the same encoder once (about 110 MB, then cached), embeds your description, and compares it with all motifs in a few milliseconds. For one- and two-word queries exact word matches count for a little more, and a name found in no headline is looked up in the references — which is how <a href="${searchHref({ q: 'Melusine' })}">Melusine</a> finds the Melusine tabu.</li>
-      <li><b>Trained on tale summaries.</b> The encoder, <code>bge-base-en-v1.5</code>, was fine-tuned on some 1,800 plot fragments from the tale-type summaries of the Aarne–Thompson–Uther index, each with the motif cited for it (“…he falls into a magic sleep [D1975]”), from Joshua Hagedorn’s <a href="https://github.com/j-hagedorn/trilogy">trilogy</a> datasets. It has learned how stories put what Thompson puts tersely.</li>
+      <li><b>Trained on tales.</b> The encoder, <code>bge-base-en-v1.5</code>, was fine-tuned on some 1,800 plot fragments from the tale-type summaries of the Aarne–Thompson–Uther index, each with the motif cited for it (“…he falls into a magic sleep [D1975]”), and on 4,700 searches written from real tales: a language model (Claude Sonnet) found where a telling expresses one of its type’s motifs, then, without seeing Thompson’s wording, wrote what someone half-remembering the episode might type. Both come from Joshua Hagedorn’s <a href="https://github.com/j-hagedorn/trilogy">trilogy</a> datasets. The encoder has learned how stories, and people, put what Thompson puts tersely.</li>
       <li><b>In plain words.</b> For every motif a language model (Claude Haiku) wrote one or two plain sentences and a few phrases one might search with. These count as a second description of the motif when you search, and are shown on motif pages marked <i>In plain words</i>. They are generated, not Thompson’s, and can be wrong in detail.</li>
       <li><b>The atlas.</b> Each tradition is placed where its tales were collected — the Ekoi on the Cross River, the Toba in the Gran Chaco — ${fmt(at.places.length)} places in all, from a gazetteer written for Spindle. Labels for a whole region (“African”, “Polynesian”) and written or religious traditions (“Jewish”, “Italian Novella”) are drawn differently from peoples and places. The <a href="${go('/atlas')}">atlas</a> shows what Thompson’s sources cover, not where a motif is or is not told; coastlines are from <a href="https://www.naturalearthdata.com/">Natural Earth</a>.</li>
       <li><b>Echoes.</b> On every motif page, Spindle lists the most similar motifs that Thompson filed in other branches — the duplications and near-duplications he himself acknowledged (<a href="${motifHref('D1645.9')}">D1645.9</a> and <a href="${motifHref('F718.5')}">F718.5</a>), and many he did not.</li>
@@ -1245,15 +1245,22 @@ async function viewAbout() {
       <tr><td>Spindle, first version</td><td>24%</td><td>44%</td></tr>
       <tr><td>Spindle, trained and with plain words</td><td>33%</td><td>55%</td></tr>
     </table>
+    <p>A second test comes closer to how Spindle is used: 1,600 searches from 400 passages of folktales, again of tale types the encoder never saw — the passages themselves, and vague lines, descriptions and keywords written from them without Thompson’s wording (“a bird sat on the bones and they turned into a boy again”). The index lists the motifs of a tale <i>type</i>, so a telling usually contains motifs beyond the one a search was written for; a language model judged the top results, and the second column counts any motif a folklorist would cite for the episode.</p>
+    <table>
+      <tr><th></th><th>in the top ten, the listed motif</th><th>in the top ten, any fitting motif</th></tr>
+      <tr><td>Spindle, trained on summaries only</td><td>47%</td><td>75%</td></tr>
+      <tr><td>Spindle, trained on summaries and tales</td><td>51%</td><td>79%</td></tr>
+    </table>
+    <p>Describing the episode works better than pasting the passage: about four in five descriptions find a fitting motif in the top ten, against two in three passages.</p>
     <p>Against MOMFER, on forty queries written before either system was run on them — twenty plain-language descriptions (“a man trades his soul for riches”) and twenty short keyword searches (“flying carpet”) — with MOMFER’s search reconstructed from its source code:</p>
     <table>
       <tr><th></th><th>right motif first</th><th>in the top ten</th></tr>
-      <tr><td>Spindle, descriptions</td><td>85%</td><td>100%</td></tr>
+      <tr><td>Spindle, descriptions</td><td>90%</td><td>100%</td></tr>
       <tr><td>MOMFER, descriptions</td><td>45%</td><td>60%</td></tr>
-      <tr><td>Spindle, keywords</td><td>75%</td><td>100%</td></tr>
+      <tr><td>Spindle, keywords</td><td>80%</td><td>90%</td></tr>
       <tr><td>MOMFER, keywords</td><td>65%</td><td>80%</td></tr>
     </table>
-    <p>MOMFER misses outright what it cannot match word for word — “werewolf” when Thompson wrote <i>werwolf</i>, “the trickster gets stuck to a figure covered in tar” for the tar-baby. Forty queries is a small sample, and these were also looked at while choosing the trained encoder; the tale-summary test above is the fairer measure. Treat the results as a well-read colleague’s suggestions, and check the index.</p>
+    <p>MOMFER misses outright what it cannot match word for word — “werewolf” when Thompson wrote <i>werwolf</i>, “the trickster gets stuck to a figure covered in tar” for the tar-baby. Forty queries is a small sample, and these were also looked at while choosing the trained encoder; the tests above are the fairer measure. Treat the results as a well-read colleague’s suggestions, and check the index.</p>
 
     <h2>Searching</h2>
     <table>

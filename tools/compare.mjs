@@ -1,20 +1,22 @@
 // Score Spindle (the static site's search) and the reconstructed MOMFER on the held-out set.
-//   node tools/compare.mjs pipeline/heldout.json data/build/heldout_momfer.json
+//   node tools/compare.mjs pipeline/heldout.json data/build/heldout_momfer.json [--data path/to/exported/data/]
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { pipeline, env } from '@huggingface/transformers';
 import { Index } from '../docs/static/search.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const [qfile, mfile] = process.argv.slice(2).map((f) => ROOT + f);
-const D = ROOT + 'docs/data/';
+const args = process.argv.slice(2);
+const [qfile, mfile] = args.filter((a) => a.endsWith('.json')).map((f) => ROOT + f);
+const di = args.indexOf('--data');
+const D = ROOT + (di >= 0 ? args[di + 1] : 'docs/data').replace(/\/?$/, '/');
 const json = (f) => JSON.parse(readFileSync(D + f, 'utf8'));
 const buf = (f) => { const b = readFileSync(D + f); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
 const ix = new Index({ meta: json('meta.json'), motifs: json('motifs.json'), tree: json('tree.json'),
   vectors: new Int8Array(buf('vectors.i8')), projection: new Float32Array(buf('projection.f32')) });
 let modelName = ix.meta.model;
 if (modelName.startsWith('local:')) { modelName = modelName.slice(6); env.localModelPath = ROOT + 'docs/models/'; env.allowRemoteModels = false; }
-const ex = await pipeline('feature-extraction', modelName, { dtype: 'q8' });
+const ex = await pipeline('feature-extraction', modelName, { dtype: 'q8', revision: ix.meta.model_revision || 'main' });
 const embed = async (t) => (await ex(t, { pooling: 'cls', normalize: true })).data;
 
 const queries = JSON.parse(readFileSync(qfile, 'utf8'));

@@ -20,12 +20,13 @@ async def main():
     ap.add_argument("--h", type=int, default=1000)
     ap.add_argument("--dark", action="store_true")
     ap.add_argument("--full", action="store_true")
+    ap.add_argument("--scale", type=float, default=1)
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     async with async_playwright() as p:
         b = await p.chromium.launch(channel="chrome")
-        ctx = await b.new_context(viewport={"width": a.w, "height": a.h}, device_scale_factor=1,
+        ctx = await b.new_context(viewport={"width": a.w, "height": a.h}, device_scale_factor=a.scale,
                                   color_scheme="dark" if a.dark else "light")
         page = await ctx.new_page()
         page.on("console", lambda m: m.type in ("error", "warning") and print("console:", m.type, m.text))

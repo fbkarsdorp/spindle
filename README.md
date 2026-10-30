@@ -46,7 +46,10 @@ The search model and the plain-language readings (see below):
 uv run python pipeline/atu_bench.py                         # ATU fragment benchmark -> data/build/atu_{train,dev,test}.json
 source ~/.anthropic_env                                     # ANTHROPIC_API_KEY
 uv run --group llm python pipeline/readings.py all          # readings for all motifs (Claude Haiku, about $2.60)
-uv run --group train python pipeline/finetune.py --epochs 3 --hard 3 --name spindle-bge-base-motifs
+uv run --group llm python pipeline/tale_bench.py build --split train --n 0   # tale queries for training (Claude Sonnet, about $11)
+uv run --group llm python pipeline/tale_bench.py check --split train          # drop passages whose motif does not fit (about $1)
+uv run --group train python pipeline/finetune.py --epochs 3 --hard 3 --name spindle-bge-base-motifs \
+    --tales data/build/tale_train_checked.json --tale-kinds vague,description,keywords --tale-negatives random
 uv run python pipeline/compare.py data/models/spindle-bge-base-motifs --split dev   # with and without readings
 ```
 
@@ -58,8 +61,13 @@ uvx --from "optimum[onnxruntime]" optimum-cli export onnx --model data/models/sp
 # move export/model.onnx to onnx/, the tokenizer and config files up one level, then quantise:
 # onnxruntime.quantization.quantize_dynamic(..., "onnx/model_quantized.onnx", weight_type=QuantType.QInt8)
 uv run python pipeline/static.py --model data/models/spindle-bge-base-motifs \
-    --readings data/build/readings/claude-haiku-5-5.jsonl --browser-model folgertk/spindle-bge-base-motifs
+    --readings data/build/readings/claude-haiku-5-5.jsonl --browser-model folgertk/spindle-bge-base-motifs \
+    --browser-revision <commit on Hugging Face> --confidence 4.8,0.7
 ```
+
+`--browser-revision` pins the model's commit, so a browser that cached an earlier model never pairs it
+with new vectors. `--confidence` places the displayed confidence midway between the median z-scores of
+the first and tenth result on the ATU development fragments; recompute it for a new model.
 
 For a local test, copy the converted model to `docs/models/spindle-bge-base-motifs/` (git-ignored) and
 pass `--browser-model local:spindle-bge-base-motifs`.
@@ -67,7 +75,8 @@ pass `--browser-model local:spindle-bge-base-motifs`.
 The raw sources are in `data/raw/`: the 23 ruthenia.ru pages, the old MOMFER heading index, and the
 Internet Archive OCR text, which is kept only for reference. The trilogy data (`data/raw/trilogy/`),
 the ATU benchmark and the trained models are not in the repository: the ATU summaries are Uther's
-copyrighted text, included in trilogy (CC BY-SA 4.0) with permission. The fine-tuned model is on
+copyrighted text, included in trilogy (CC BY-SA 4.0) with permission. The tale benchmark and training
+queries (`data/build/tale_*.json`) quote Ashliman's tale texts and also stay local. The fine-tuned model is on
 Hugging Face as [folgertk/spindle-bge-base-motifs](https://huggingface.co/folgertk/spindle-bge-base-motifs),
 under the same licence.
 
@@ -130,18 +139,50 @@ context ("by handing him an apple" → H481.1), so the ceiling is well below 100
 | ATU test fragments, browser pipeline | right motif first | in top 10 | MRR |
 |---|---|---|---|
 | stock bge-base | 0.24 | 0.44 | 0.30 |
-| fine-tuned + readings (the site) | 0.33 | 0.55 | 0.40 |
+| fine-tuned on summaries + readings (version 1) | 0.33 | 0.55 | 0.40 |
+| fine-tuned on summaries and tales + readings (the site) | 0.33 | 0.55 | 0.40 |
 
-At full precision the fine-tuned model with readings reaches 0.34 / 0.58 / 0.42. The browser's int8
-model and 256-dimension vectors cost about three points.
+At full precision the model with readings reaches 0.34 / 0.57 / 0.41. The browser's int8 model and
+256-dimension vectors cost about three points.
+
+**Tales** (`pipeline/tale_bench.py`). The ATU fragments are Uther's phrasing. Closer to how people search
+are queries written from real tellings. The trilogy dataset has 1,518 tales from D. L. Ashliman's
+*Folktexts*, each with its ATU type, and Uther lists the motifs of each type. Claude Sonnet reads a tale
+with its type's motifs and quotes the passage where this telling expresses each one (about half are
+absent: the lists belong to the type, not the telling). A second call, seeing only the passage with the
+episode marked and a few sentences around it, never the motif's number or wording, writes a vague line, a
+description and keywords. Their content words overlap Thompson's headline by 9–22%, against 26% for
+queries written from the headline and 18% for Wikipedia sentences that cite a motif.
+
+A telling also contains motifs Uther does not list, so one gold motif per query is too narrow. For each
+passage the top ten of every compared model are pooled, and Sonnet judges each candidate against the
+episode: one a folklorist would cite, broader than needed, or not fitting. Passages whose own motif is
+judged not to fit (about 15%) are dropped. Results on the test split, 1,600 queries from 30 unseen tale
+types, full precision with readings, top 10 / MRR:
+
+| | listed motif | any fitting motif |
+|---|---|---|
+| version 1 | 0.47 / 0.28 | 0.75 / 0.50 |
+| the site | 0.51 / 0.31 | 0.79 / 0.54 |
+
+The difference is +4.3 points in the top 10 [95% interval +2.6, +6.1], resampling tale types. By kind of
+query (the site, any fitting motif): passages 0.64, vague lines 0.80, descriptions 0.85, keywords 0.88.
+In the browser, scored on the listed motif only: 0.49 / 0.30 against 0.44 / 0.25.
+
+The training split's 923 tales give 4,740 queries (after `check` drops passages whose motif does not fit).
+A first run on all four kinds with mined hard negatives, as for the ATU fragments, made the encoder
+worse (−2 points on the listed motif). Using only the written queries, with random negatives, made it
+better. The likely reason is that a passage expresses several motifs, so the encoder's near misses are
+often right answers, and training against them pushes right answers away; random negatives cannot.
+Doubling the weight of the ATU pairs made every score worse, ATU included.
 
 Two small hand-made sets, run with `node tools/eval_static.mjs [file]` against the site's own search
 code (install the Node dependencies first with `cd tools && npm install`):
 
 | | | right motif first | in top 10 | MRR |
 |---|---|---|---|---|
-| `pipeline/devset.json` | 30 descriptions | 0.63 | 1.00 | 0.78 |
-| `pipeline/heldout.json` | 40 queries written before running either system | 0.80 | 1.00 | 0.87 |
+| `pipeline/devset.json` | 30 descriptions | 0.73 | 0.97 | 0.84 |
+| `pipeline/heldout.json` | 40 queries written before running either system | 0.85 | 0.95 | 0.89 |
 
 Both were also looked at while choosing among trained encoders, and some of their target motifs occur in
 the ATU training fragments of other tale types, so the ATU test set is the fairer measure.
@@ -153,7 +194,7 @@ Pattern, and Whoosh-Reloaded for Whoosh. On the 40 held-out queries:
 
 | | descriptions: first / top 10 | keywords: first / top 10 | all: MRR |
 |---|---|---|---|
-| Spindle | 0.85 / 1.00 | 0.75 / 1.00 | 0.87 |
+| Spindle | 0.90 / 1.00 | 0.80 / 0.90 | 0.89 |
 | MOMFER (reconstructed) | 0.45 / 0.60 | 0.65 / 0.80 | 0.61 |
 
 ```sh
@@ -162,11 +203,15 @@ node tools/compare.mjs pipeline/heldout.json data/build/heldout_momfer.json
 ```
 
 MOMFER misses outright what it cannot match word for word: "werewolf" (Thompson wrote *werwolf*), or "a
-trickster gets stuck to a figure covered in tar".
+trickster gets stuck to a figure covered in tar". The current model in turn misses two keyword
+queries that version 1 found and MOMFER finds at ranks 4 and 8, "fairy ring" and "buried treasure".
 
 **What else was tried.** Training additionally on 226,000 search phrases written by Haiku for every
 motif (`--synthetic`, 40 minutes) gave no gain over the three-minute model. Neither did more epochs, a
-higher learning rate, or starting from that larger model.
+higher learning rate, or starting from that larger model. Adding the motif's place in the index
+("Magic › Magic power of prophecy › …") to its text, or scoring a motif partly by how well the query
+matches its whole branch, did not help either; the readings were already written with that context.
+bge-small (34 MB, trained the same way) scored about five points lower on the tale queries.
 
 **Choosing the base model.** Before any training, `pipeline/experiment.py` compared bge-base, bge-large, bge-m3, e5-large-v2,
 mxbai-embed-large, gte-modernbert and Qwen3-Embedding-0.6B on the development set. Two findings went
@@ -195,6 +240,8 @@ pipeline/   parse.py, build.py, index.py, static.py     build the data
             places.py, atlas.py                         the gazetteer and the world map
             readings.py, finetune.py                    plain-language readings; training the encoder
             atu_bench.py, compare.py, devset.json, heldout.json, experiment.py   benchmarks and model comparison
+            tale_bench.py                               queries from real tales, judged results
+            desc_bench.py, desc_wiki.json               motif descriptions from Wikipedia and generated ones
 tools/      eval_static.mjs, compare.mjs   benchmarks in Node, using the site's search code
             momfer_legacy.py               the reconstructed MOMFER
             artgen.py, shoot.py            illustrations; screenshots (Playwright + system Chrome)

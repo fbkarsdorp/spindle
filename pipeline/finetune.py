@@ -90,6 +90,10 @@ def main():
     ap.add_argument("--hard", type=int, default=1, help="hard negatives per pair (0 = in-batch only)")
     ap.add_argument("--name", default="spindle-bge-base-atu")
     ap.add_argument("--synthetic", default=None, help="readings .jsonl: add its search phrases and plain readings as training queries")
+    ap.add_argument("--tales", default=None, help="tale queries (pipeline/tale_bench.py, train split, checked) to add as training pairs")
+    ap.add_argument("--tale-kinds", default="passage,vague,description,keywords", help="which kinds of tale query to use")
+    ap.add_argument("--tale-negatives", default="mined", choices=["mined", "random"],
+                    help="mined hard negatives can be motifs the tale also contains; random ones cannot be confused that way")
     ap.add_argument("--atu-repeat", type=int, default=1, help="repeat the ATU pairs so they keep weight among synthetic ones")
     ap.add_argument("--base", default=BASE, help="model to start from")
     args = ap.parse_args()
@@ -125,6 +129,26 @@ def main():
                 rows[f"negative_{k}"].append(doc_text(nodes[negs[i][k]]))
     for k in list(rows):
         rows[k] = rows[k] * args.atu_repeat
+    if args.tales:
+        # passages of real tales and queries written blind from them (train-split
+        # tale types only); hard negatives mined as for the ATU fragments
+        kinds = set(args.tale_kinds.split(","))
+        tales = [x for x in json.load(open(args.tales)) if x["kind"] in kinds]
+        if args.hard and args.tale_negatives == "mined":
+            tnegs = mine_hard_negatives(model, docs, ids, tales, args.hard)
+        else:
+            rng = random.Random(5)
+            tnegs = [[m for m in rng.sample(ids, args.hard + 5) if m not in x["near"]][:args.hard] for x in tales]
+        n_tale = 0
+        for i, x in enumerate(tales):
+            if args.hard and len(tnegs[i]) < args.hard:
+                continue
+            rows["anchor"].append(PROMPT + x["q"])
+            rows["positive"].append(doc_text(nodes[x["gold"][0]]))
+            for k in range(args.hard):
+                rows[f"negative_{k}"].append(doc_text(nodes[tnegs[i][k]]))
+            n_tale += 1
+        print(f"tale pairs: {n_tale}", file=sys.stderr)
     if args.synthetic:
         # every motif's generated phrases point at Thompson's own text; these
         # come from the motif alone, never from the ATU development or test fragments
