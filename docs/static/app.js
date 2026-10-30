@@ -1,6 +1,7 @@
 // Spindle — front end of the static site. Plain ES modules, no build step.
 
 import * as store from './store.js';
+import * as lists from './lists.js';
 import { LETTERS } from './search.js';
 
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -49,13 +50,55 @@ const whorl = (cls = 'whorl') => artEl('spindle', cls);
 const corners = () => ['tl', 'tr', 'bl', 'br'].map((c) => `<span class="corner ${c}" data-art="corner"></span>`).join('');
 
 let toastTimer;
-function toast(msg) {
+function toast(msg, action = null) {
   const t = $('.toast');
   t.textContent = msg;
+  if (action) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = action.label;
+    b.addEventListener('click', () => { action.run(); t.classList.remove('show'); });
+    t.append(' ', b);
+  }
+  t.classList.toggle('has-action', !!action);
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  toastTimer = setTimeout(() => t.classList.remove('show'), action ? 5000 : 2200);
 }
+
+// ------------------------------------------------------------ motif lists
+
+// a ＋ that puts a motif on the current list, or takes it off again
+const addBtn = (id, { mini = true } = {}) => {
+  const on = lists.has(id);
+  return `<button type="button" class="add${mini ? ' mini' : ''}" data-add="${esc(id)}" aria-pressed="${on}"
+    aria-label="${on ? 'Remove' : 'Add'} ${esc(id)} ${on ? 'from' : 'to'} your list" title="${on ? 'On your list' : 'Add to your list'}">${mini ? '' : `<span>${on ? 'on your list' : 'add to list'}</span>`}</button>`;
+};
+function toggleOnList(id) {
+  const r = lists.toggle(id);
+  if (r.added) toast(`Added ${id} to ${lists.current().title ? `“${lists.current().title}”` : 'your list'}`);
+  else toast(`Took ${id} off your list`, { label: 'Undo', run: () => lists.restore(r.item, r.index) });
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-add]');
+  if (!b) return;
+  e.preventDefault();
+  e.stopPropagation();
+  toggleOnList(b.dataset.add);
+}, true);
+function refreshLists() {
+  const n = lists.count();
+  $('.nav .list-count').textContent = n ? String(n) : '';
+  for (const b of $$('[data-add]')) {
+    const on = lists.has(b.dataset.add);
+    b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-label', `${on ? 'Remove' : 'Add'} ${b.dataset.add} ${on ? 'from' : 'to'} your list`);
+    b.title = on ? 'On your list' : 'Add to your list';
+    const label = $('span', b);
+    if (label) label.textContent = on ? 'on your list' : 'add to list';
+  }
+}
+lists.onChange(refreshLists);
 
 // ---------------------------------------------------------------- router
 
@@ -67,6 +110,7 @@ const routes = [
   [/^\/browse\/(.+)$/, viewBrowse],
   [/^\/map\/?$/, () => navigate(go('/atlas'), { replace: true })], // the meaning map, retired
   [/^\/atlas\/?$/, viewAtlas],
+  [/^\/list\/?$/, viewList],
   [/^\/about\/?$/, viewAbout],
 ];
 let cleanup = null;
@@ -333,6 +377,7 @@ async function viewSearch() {
   });
   const onKey = (e) => {
     if (e.target.matches('textarea, input')) return;
+    if (e.key === 'a' && current && !e.metaKey && !e.ctrlKey) { toggleOnList(current); return; }
     if (!['ArrowDown', 'ArrowUp', 'j', 'k'].includes(e.key)) return;
     const ids = $$('.result', col).map((r) => r.dataset.id);
     if (!ids.length) return;
@@ -369,7 +414,7 @@ function withParam(k, v) {
 function resultItem(r) {
   const path = r.path.filter((p) => p.id.length > 1).slice(-2);
   return `
-    <li><a class="result" data-id="${esc(r.id)}" href="${motifHref(r.id)}">
+    <li class="result-li">${addBtn(r.id)}<a class="result" data-id="${esc(r.id)}" href="${motifHref(r.id)}">
       <div class="result-head"><span class="mid">${esc(r.id)}</span><span class="result-title">${esc(r.title)}</span>
         ${r.via === 'meaning' ? `<span class="score" title="match ${(r.score * 100).toFixed(0)}%"><i style="width:${Math.max(4, r.score * 100)}%"></i></span>` : ''}</div>
       ${r.note ? `<div class="result-note">${esc(r.note)}</div>` : ''}
@@ -439,7 +484,7 @@ function mlist(items, { ctx = true } = {}) {
   return `<ul class="mlist">${items.map((x) => {
     const where = ctx && x.path ? x.path.filter((p) => p.id.length > 1).slice(-1).map((p) => trimDot(p.title))[0] : '';
     return `<li><a class="mid" href="${motifHref(x.id)}">${esc(x.id)}</a>
-      <span><a href="${motifHref(x.id)}">${esc(x.title)}</a>${x.n_children ? `<span class="more">+${x.n_children}</span>` : ''}
+      <span>${addBtn(x.id)}<a href="${motifHref(x.id)}">${esc(x.title)}</a>${x.n_children ? `<span class="more">+${x.n_children}</span>` : ''}
       ${where ? `<span class="ctx">${esc(where)}</span>` : ''}</span></li>`;
   }).join('')}</ul>`;
 }
@@ -456,7 +501,7 @@ function motifHTML(m, { full = false } = {}) {
     <div class="motif-head">
       <span class="emblem" data-art="${m.letter}"></span>
       <div>
-        <div class="motif-id"><span class="mid">${esc(m.id)}</span><button class="copy" type="button" title="Copy motif number and headline">copy</button></div>
+        <div class="motif-id"><span class="mid">${esc(m.id)}</span><button class="copy" type="button" title="Copy motif number and headline">copy</button>${addBtn(m.id, { mini: false })}</div>
         <h2>${esc(m.title)}</h2>
       </div>
     </div>
@@ -808,7 +853,7 @@ async function viewAtlas() {
     if (p) detail(p); else overview();
   }
   function motifRows(list, from) {
-    return list.slice(from, from + 50).map((r) => `<li><a class="mid" href="${motifHref(ix.rows[r][0])}">${esc(ix.rows[r][0])}</a> <a href="${motifHref(ix.rows[r][0])}">${esc(ix.rows[r][1])}</a></li>`).join('');
+    return list.slice(from, from + 50).map((r) => `<li>${addBtn(ix.rows[r][0])}<a class="mid" href="${motifHref(ix.rows[r][0])}">${esc(ix.rows[r][0])}</a> <a href="${motifHref(ix.rows[r][0])}">${esc(ix.rows[r][1])}</a></li>`).join('');
   }
   panel.addEventListener('click', (e) => {
     const b = e.target.closest('button');
@@ -962,6 +1007,213 @@ async function viewAtlas() {
   return () => { ro.disconnect(); stopModel?.(); };
 }
 
+// ----------------------------------------------------------------- list
+
+const FORMATS = [
+  ['numbers', 'Numbers', 'D1975; H481.1 — for a footnote or a tale’s motif line'],
+  ['lines', 'With headlines', 'one motif per line, with Thompson’s headline and your note'],
+  ['table', 'Table', 'tab-separated: pastes into a spreadsheet'],
+];
+const slug = (s) => (s || 'motifs').toLowerCase().normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'motifs';
+
+function exportText(ix, items, fmt) {
+  const info = (id) => {
+    const i = ix.row.get(id);
+    return i == null ? { title: '', branch: '' } : { title: ix.rows[i][1], branch: `${id[0]}. ${ix.categories[id[0]] || ''}` };
+  };
+  if (fmt === 'numbers') return items.map((x) => x.id).join('; ');
+  if (fmt === 'lines') return items.map((x) => `${x.id} ${info(x.id).title}${x.note ? ` — ${x.note}` : ''}`).join('\n');
+  const cell = (v) => String(v || '').replace(/[\t\n]+/g, ' ');
+  return ['Motif\tHeadline\tBranch\tNote', ...items.map((x) => { const f = info(x.id); return [x.id, f.title, f.branch, x.note].map(cell).join('\t'); })].join('\n');
+}
+
+function csv(ix, items) {
+  const q = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+  const rows = items.map((x) => {
+    const i = ix.row.get(x.id);
+    return [x.id, i == null ? '' : ix.rows[i][1], `${x.id[0]}. ${ix.categories[x.id[0]] || ''}`, x.note].map(q).join(',');
+  });
+  return '﻿' + ['Motif,Headline,Branch,Note', ...rows].join('\r\n');
+}
+
+async function copyText(text, what) {
+  try { await navigator.clipboard.writeText(text); toast(`Copied ${what}`); } catch (e) { toast('Could not copy; select the text and copy it'); }
+}
+
+async function viewList() {
+  const ix = await store.index();
+  let fmt = 'numbers';
+  try { fmt = localStorage.getItem('spindle-list-format') || fmt; } catch (e) { /* default */ }
+  const sharedParam = route().params.get('share');
+  let shared = sharedParam ? lists.decode(sharedParam) : null;
+  if (shared) shared.items = shared.items.filter((x) => ix.row.has(x.id));
+  let dragFrom = -1, confirmDrop = false;
+
+  const itemHTML = (x, k, editable) => {
+    const i = ix.row.get(x.id);
+    if (i == null) return '';
+    const path = ix.path(x.id).filter((p) => p.id.length > 1).slice(-2).map((p) => trimDot(p.title));
+    return `<li class="li-item" data-id="${esc(x.id)}" data-k="${k}"${editable ? ' draggable="true"' : ''}>
+      ${editable ? '<span class="grip" aria-hidden="true" title="Drag to reorder"></span>' : `<span class="li-n">${k + 1}</span>`}
+      <div class="li-body">
+        <div class="li-head"><a class="mid" href="${motifHref(x.id)}">${esc(x.id)}</a> <a class="li-title" href="${motifHref(x.id)}">${esc(ix.rows[i][1])}</a></div>
+        <div class="li-path">${esc(x.id[0])} · ${esc(SHORT[x.id[0]] || '')}${path.length ? ' › ' + path.map(esc).join(' › ') : ''}</div>
+        ${editable ? `<input class="li-note" type="text" value="${esc(x.note)}" placeholder="Note: where it happens in the tale…" aria-label="Note for ${esc(x.id)}">` : (x.note ? `<div class="li-note-ro">${esc(x.note)}</div>` : '')}
+      </div>
+      ${editable ? `<div class="li-tools">
+        <button type="button" data-move="-1" aria-label="Move up"${k === 0 ? ' disabled' : ''}>↑</button>
+        <button type="button" data-move="1" aria-label="Move down">↓</button>
+        <button type="button" data-remove aria-label="Remove ${esc(x.id)}">✕</button></div>` : ''}
+    </li>`;
+  };
+
+  function render() {
+    const l = lists.current();
+    const editable = !shared;
+    const items = shared ? shared.items : l.items;
+    document.title = `${(shared ? shared.title : l.title) || 'Your list'} · Spindle`;
+    main.innerHTML = `<div class="wrap list-page">
+      ${shared ? `<div class="shared-banner"><span>A list shared with you${shared.title ? `: <b>${esc(shared.title)}</b>` : ''} — ${items.length} motif${items.length === 1 ? '' : 's'}.</span>
+        <span><button type="button" class="btn" data-act="keep">Keep it as a new list</button> <a class="btn ghost" href="${go('/list')}">Back to your lists</a></span></div>` : ''}
+      <div class="list-layout">
+        <section class="list-main">
+          ${editable ? `<div class="list-switch">
+            <select class="list-select" aria-label="Your lists">${lists.all().map((x) => `<option value="${x.id}"${x.id === l.id ? ' selected' : ''}>${esc(x.title || 'Untitled list')} (${x.items.length})</option>`).join('')}</select>
+            <button type="button" class="chip" data-act="new">＋ New list</button>
+            <button type="button" class="chip danger" data-act="drop">${confirmDrop ? 'Really delete this list?' : 'Delete list'}</button>
+          </div>
+          <input class="list-title" type="text" value="${esc(l.title)}" placeholder="Untitled list" aria-label="Name of this list">` : `<h1 class="list-title-ro">${esc(shared.title || 'A list of motifs')}</h1>`}
+          <p class="list-meta">${items.length} motif${items.length === 1 ? '' : 's'}${editable ? ` · ${lists.persistent ? 'kept in this browser' : '<b>this browser will not keep it</b> — copy it before you leave'}` : ''}
+            ${editable && items.length > 1 ? ` · <button type="button" class="linkish" data-act="sort">put in Thompson’s order</button>` : ''}</p>
+          ${items.length ? `<ol class="li-list">${items.map((x, k) => itemHTML(x, k, editable)).join('')}</ol>`
+            : `<div class="empty">${artEl('owl-empty', 'owl')}<p>Nothing here yet. Add motifs with the <span class="add mini demo" aria-hidden="true"></span> beside search results, on motif pages and in the lists of related motifs. In search results, <kbd>a</kbd> adds the motif you are reading.</p></div>`}
+        </section>
+        ${items.length ? `<aside class="list-export">
+          <h4>Copy the list</h4>
+          <div class="formats" role="radiogroup" aria-label="Format">${FORMATS.map(([k, label, hint]) => `<button type="button" class="chip" role="radio" data-fmt="${k}" aria-checked="${k === fmt}" aria-pressed="${k === fmt}" title="${esc(hint)}">${label}</button>`).join('')}</div>
+          <p class="hint">${esc(FORMATS.find(([k]) => k === fmt)[2])}</p>
+          <textarea class="export-text" readonly rows="8" aria-label="The list as text">${esc(exportText(ix, items, fmt))}</textarea>
+          <div class="export-actions">
+            <button type="button" class="btn" data-act="copy">Copy</button>
+            <button type="button" class="btn ghost" data-act="csv">Download CSV</button>
+            <button type="button" class="btn ghost" data-act="link">Copy a link to this list</button>
+          </div>
+        </aside>` : ''}
+      </div>
+    </div>`;
+    hydrateArt(main);
+  }
+
+  const items = () => (shared ? shared.items : lists.current().items);
+  const updateExport = () => { const t = $('.export-text', main); if (t) t.value = exportText(ix, items(), fmt); };
+
+  const onClick = async (e) => {
+    const b = e.target.closest('button');
+    if (!b || !main.contains(b)) return;
+    const li = b.closest('.li-item');
+    if (b.dataset.fmt) {
+      fmt = b.dataset.fmt;
+      try { localStorage.setItem('spindle-list-format', fmt); } catch (err) { /* fine */ }
+      render();
+      return;
+    }
+    if (li && b.dataset.move) { const k = +li.dataset.k; lists.move(k, k + +b.dataset.move); return; }
+    if (li && b.hasAttribute('data-remove')) {
+      const r = lists.remove(li.dataset.id);
+      if (r) toast(`Took ${li.dataset.id} off your list`, { label: 'Undo', run: () => lists.restore(r.item, r.index) });
+      return;
+    }
+    const act = b.dataset.act;
+    if (act === 'new') { confirmDrop = false; lists.create(); $('.list-title', main)?.focus(); }
+    if (act === 'drop') {
+      if (!confirmDrop) { confirmDrop = true; render(); return; }
+      confirmDrop = false;
+      lists.drop(lists.current().id);
+      toast('List deleted');
+    }
+    if (act === 'sort') lists.sortBy((id) => ix.row.get(id) ?? Infinity);
+    if (act === 'copy') copyText(exportText(ix, items(), fmt), fmt === 'numbers' ? 'the motif numbers' : 'the list');
+    if (act === 'csv') {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv(ix, items())], { type: 'text/csv;charset=utf-8' }));
+      a.download = `${slug(shared ? shared.title : lists.current().title)}.csv`;
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+    if (act === 'link') {
+      const l = shared || lists.current();
+      copyText(new URL(go('/list?' + new URLSearchParams({ share: lists.encode(l) })), location.href).href, 'a link to this list');
+    }
+    if (act === 'keep') {
+      lists.create(shared.title, shared.items.map((x) => ({ ...x })));
+      toast('Kept as a new list');
+      navigate(go('/list'));
+    }
+  };
+  main.addEventListener('click', onClick);
+  const onChange = (e) => {
+    if (e.target.matches('.list-select')) { confirmDrop = false; lists.select(e.target.value); }
+  };
+  main.addEventListener('change', onChange);
+  const onInput = (e) => {
+    if (e.target.matches('.list-title')) {
+      lists.rename(e.target.value);
+      const opt = $(`.list-select option[value="${lists.current().id}"]`, main);
+      if (opt) opt.textContent = `${e.target.value || 'Untitled list'} (${lists.count()})`;
+    }
+    if (e.target.matches('.li-note')) { lists.setNote(e.target.closest('.li-item').dataset.id, e.target.value); updateExport(); }
+  };
+  main.addEventListener('input', onInput);
+  // drag to reorder (with the arrows for keyboards and touch screens)
+  const onDragStart = (e) => {
+    const li = e.target.closest?.('.li-item[draggable]');
+    if (!li || e.target.matches('input')) return;
+    dragFrom = +li.dataset.k;
+    li.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', li.dataset.id);
+  };
+  const onDragOver = (e) => {
+    const li = e.target.closest?.('.li-item');
+    if (dragFrom < 0 || !li) return;
+    e.preventDefault();
+    $$('.li-item.over', main).forEach((x) => x !== li && x.classList.remove('over'));
+    li.classList.add('over');
+  };
+  const onDrop = (e) => {
+    const li = e.target.closest?.('.li-item');
+    if (dragFrom < 0 || !li) return;
+    e.preventDefault();
+    const from = dragFrom;
+    dragFrom = -1;
+    lists.move(from, +li.dataset.k);
+  };
+  const onDragEnd = () => { dragFrom = -1; $$('.li-item.dragging, .li-item.over', main).forEach((x) => x.classList.remove('dragging', 'over')); };
+  main.addEventListener('dragstart', onDragStart);
+  main.addEventListener('dragover', onDragOver);
+  main.addEventListener('drop', onDrop);
+  main.addEventListener('dragend', onDragEnd);
+
+  // re-render on changes, but not under the cursor while someone types
+  const off = lists.onChange(() => {
+    if (shared) return;
+    const a = document.activeElement;
+    const typing = a && main.contains(a) && a.matches('input[type="text"]');
+    if (!typing) render();
+  });
+  render();
+  return () => {
+    off();
+    main.removeEventListener('click', onClick);
+    main.removeEventListener('change', onChange);
+    main.removeEventListener('input', onInput);
+    main.removeEventListener('dragstart', onDragStart);
+    main.removeEventListener('dragover', onDragOver);
+    main.removeEventListener('drop', onDrop);
+    main.removeEventListener('dragend', onDragEnd);
+  };
+}
+
 // ---------------------------------------------------------------- about
 
 async function viewAbout() {
@@ -1013,9 +1265,12 @@ async function viewAbout() {
       <tr><td><code>ogre region:"South Asia"</code></td><td>only motifs attested in a region</td></tr>
       <tr><td><code>type:510</code></td><td>motifs referring to a tale type (510, 510A, 510B …)</td></tr>
     </table>
+    <h2>Keeping a list</h2>
+    <p>Annotating a tale means collecting motifs. The <span class="add mini demo" aria-hidden="true"></span> beside a search result, on a motif page or in a list of related motifs puts it on <a href="${go('/list')}">your list</a> (in search results, <kbd>a</kbd> does the same for the motif you are reading). Keep a list per tale, note where each motif occurs, put them in Thompson’s order, and copy the list as motif numbers (“D1975; H481.1”), as numbers with headlines, or as a table for a spreadsheet. Lists stay in your browser; a link carries one to a colleague.</p>
     <p>In references, Thompson’s asterisk marks a reference with further bibliography, the double asterisk an especially full treatment.</p>
   </article>`;
 }
 
 hydrateArt(document);
+refreshLists();
 render();

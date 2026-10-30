@@ -12,6 +12,9 @@ with no server.
   region), tale types, references with clickable cross-references, subdivisions, and **echoes**: similar
   motifs Thompson filed under other headings.
 - **Browse** the tree from A to Z.
+- **Lists**: collect motifs while annotating a tale, one list per tale, with a note per motif; copy a list
+  as numbers ("D1975; H481.1"), with headlines, or as a table or CSV, or send it as a link. Lists are kept
+  in the browser's local storage (`docs/static/lists.js`).
 - The **atlas** puts Thompson's traditions on a papercut world map: where his sources tell each motif,
   overall, by branch, or for the closest matches to a description. Motif pages show their own small map.
 
@@ -185,7 +188,8 @@ folklorist would assign, so it was dropped in favour of the static site. That ve
 
 ```
 docs/       the website (GitHub Pages)
-            index.html, static/app.js (views), static/store.js (data), static/search.js (search), static/app.css
+            index.html, static/app.js (views), static/store.js (data), static/search.js (search),
+            static/lists.js (motif lists), static/app.css
             art/   papercut illustrations          data/  exported by pipeline/static.py
 pipeline/   parse.py, build.py, index.py, static.py     build the data
             places.py, atlas.py                         the gazetteer and the world map
