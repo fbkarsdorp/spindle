@@ -465,3 +465,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; line-height: 1.15; m
 .map-loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 @media (max-width: 560px) { .result .score { display: none; } }
 .region .cul { align-items: flex-start; align-content: flex-start; }
+
+/* a generated plain-language reading, set apart from Thompson's own words */
+.motif .reading { font-size: 16px; color: var(--ink-2); margin: 12px 0 0; max-width: var(--measure); padding-left: 12px; border-left: 2px solid var(--rule); }
+.motif .reading-label { font-family: var(--display-sc); letter-spacing: .05em; color: var(--ink-3); font-size: 14px; margin-right: 6px; cursor: help; }

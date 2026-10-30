@@ -31,8 +31,9 @@ export function parseQuery(q) {
   return { text: q.replace(FILTER_RE, ' ').replace(/\s+/g, ' ').trim(), filters: f };
 }
 
-// a display confidence from a z-score, calibrated on the benchmark
-export const confidence = (z, centre = 4.6, scale = 0.7) => 1 / (1 + Math.exp(-(z - centre) / scale));
+// a display confidence from a z-score, calibrated on ATU development fragments:
+// the tenth result typically scores z ≈ 4.4, the first z ≈ 5.9
+export const confidence = (z, centre = 5.0, scale = 0.8) => 1 / (1 + Math.exp(-(z - centre) / scale));
 
 export class Index {
   constructor({ meta, motifs, tree, vectors = null, projection = null }) {
@@ -99,13 +100,22 @@ export class Index {
   }
 
   zscores(q) {
+    // with second vectors, rows n..2n-1 hold the plain-language readings and a
+    // motif scores the better of its two matches
     const v = this.project(q), d = this.dims, n = this.n, V = this.vectors;
+    const second = !!this.meta.second_vectors;
     const s = new Float32Array(n);
     let sum = 0, sq = 0;
     for (let i = 0; i < n; i++) {
       let acc = 0;
       const base = i * d;
       for (let k = 0; k < d; k++) acc += v[k] * V[base + k];
+      if (second) {
+        let acc2 = 0;
+        const base2 = (n + i) * d;
+        for (let k = 0; k < d; k++) acc2 += v[k] * V[base2 + k];
+        if (acc2 > acc) acc = acc2;
+      }
       s[i] = acc;
       sum += acc;
       sq += acc * acc;

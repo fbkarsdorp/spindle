@@ -48,9 +48,18 @@ function loadModel() {
     emit();
     const ix = await index();
     const { pipeline, env } = await import(TRANSFORMERS);
+    // 'local:name' is a model served next to the site (docs/models/name), for testing.
+    // transformers.js only fetches local files in Node, so point its download
+    // address at this site instead of Hugging Face.
+    let name = ix.meta.model;
     env.allowLocalModels = false;
+    if (name.startsWith('local:')) {
+      name = name.slice(6);
+      env.remoteHost = new URL('models/', location.href).href;
+      env.remotePathTemplate = '{model}/';
+    }
     const files = new Map();
-    const ex = await pipeline('feature-extraction', ix.meta.model, {
+    const ex = await pipeline('feature-extraction', name, {
       dtype: 'q8',
       device: 'wasm',
       progress_callback: (p) => {
@@ -151,7 +160,7 @@ export async function full(id) {
   const extra = (await refsFor(id[0]))[id] || {};
   const pairs = r[ROW.cultures].map((c) => [ix.meta.cultures[c], ix.meta.regions[ix.meta.culture_regions[c]] || 'Elsewhere']);
   Object.assign(out, {
-    note: r[ROW.note], refs: extra.r || '', types: r[ROW.types], alt_titles: r[ROW.alt] || [],
+    note: r[ROW.note], refs: extra.r || '', reading: extra.p || '', types: r[ROW.types], alt_titles: r[ROW.alt] || [],
     cultures: pairs.map(([c]) => c), culture_regions: pairs,
     category: ix.categories[id[0]],
     cf: r[ROW.cf].map((j) => brief(ix, j)),

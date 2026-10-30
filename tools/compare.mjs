@@ -2,7 +2,7 @@
 //   node tools/compare.mjs pipeline/heldout.json data/build/heldout_momfer.json
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { pipeline } from '@huggingface/transformers';
+import { pipeline, env } from '@huggingface/transformers';
 import { Index } from '../docs/static/search.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -12,7 +12,9 @@ const json = (f) => JSON.parse(readFileSync(D + f, 'utf8'));
 const buf = (f) => { const b = readFileSync(D + f); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
 const ix = new Index({ meta: json('meta.json'), motifs: json('motifs.json'), tree: json('tree.json'),
   vectors: new Int8Array(buf('vectors.i8')), projection: new Float32Array(buf('projection.f32')) });
-const ex = await pipeline('feature-extraction', ix.meta.model, { dtype: 'q8' });
+let modelName = ix.meta.model;
+if (modelName.startsWith('local:')) { modelName = modelName.slice(6); env.localModelPath = ROOT + 'docs/models/'; env.allowRemoteModels = false; }
+const ex = await pipeline('feature-extraction', modelName, { dtype: 'q8' });
 const embed = async (t) => (await ex(t, { pooling: 'cls', normalize: true })).data;
 
 const queries = JSON.parse(readFileSync(qfile, 'utf8'));

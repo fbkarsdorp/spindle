@@ -5,3 +5,6 @@ data/index/
 *.pyc
 .DS_Store
 tools/node_modules/
+data/raw/trilogy/
+docs/models/
+data/models/

@@ -2,11 +2,13 @@
 
     uv run python pipeline/static.py [--dims 256]
 
-The browser embeds a query with the same encoder (bge-base-en-v1.5, run by
-transformers.js), projects it onto the principal components below and scores
-it against int8 motif vectors. Files:
+The browser embeds a query with the same encoder (run by transformers.js),
+projects it onto the principal components below and scores it against int8
+motif vectors. With --readings, every motif also gets a second vector for its
+plain-language reading, and scores its better match. Files:
 
-  vectors.i8        n × dims int8, PCA-projected, normalised and quantised motif embeddings
+  vectors.i8        n (or 2n) × dims int8, PCA-projected, normalised and quantised embeddings:
+                    Thompson's text for every motif, then (with readings) every reading
   projection.f32    768 mean, then 768 × dims components, then dims dequantisation scales
   motifs.json       per motif: id, title, note, parent, cultures, regions, types, cross-references
   tree.json         categories and sections: id, title, parent; plus every node's children in order
@@ -27,7 +29,8 @@ ROOT = Path(__file__).resolve().parent.parent
 INDEX = ROOT / "data" / "index"
 OUT = ROOT / "docs" / "data"
 
-MODEL = "Xenova/bge-base-en-v1.5"
+BASE = "BAAI/bge-base-en-v1.5"
+BROWSER_MODEL = "Xenova/bge-base-en-v1.5"
 QUERY_PROMPT = "Represent this sentence for searching relevant passages: "
 
 
@@ -63,9 +66,32 @@ def neighbours(E, motifs, ids, k_echo=8, k_kin=5, chunk=2048):
     return echoes, kin
 
 
+def embed(model_name, texts, cache):
+    """Embed with a sentence-transformers model, caching the result."""
+    if cache.exists():
+        return np.load(cache).astype(np.float32)
+    import torch
+    from sentence_transformers import SentenceTransformer
+
+    device = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
+    model = SentenceTransformer(model_name, device=device)
+    order = np.argsort([len(t) for t in texts])
+    vecs = model.encode([texts[i] for i in order], batch_size=128, normalize_embeddings=True,
+                        convert_to_numpy=True, show_progress_bar=True)
+    E = np.empty_like(vecs)
+    E[order] = vecs
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    np.save(cache, E.astype(np.float16))
+    return E.astype(np.float32)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dims", type=int, default=256)
+    ap.add_argument("--model", default=BASE, help="encoder for the motif vectors (a local path or a model name)")
+    ap.add_argument("--browser-model", default=BROWSER_MODEL,
+                    help="the ONNX version of the same encoder that the browser loads (Hugging Face id)")
+    ap.add_argument("--readings", default=None, help="plain-language readings (.jsonl) to add as second vectors")
     args = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "refs").mkdir(exist_ok=True)
@@ -75,15 +101,29 @@ def main():
     nodes = {n["id"]: n for n in data["nodes"]}
     motifs = [nodes[i] for i in ids]
     row = {mid: i for i, mid in enumerate(ids)}
-    meta_idx = json.load(open(INDEX / "meta.json"))
-    assert meta_idx["model"] == "BAAI/bge-base-en-v1.5"
+    sys.path.insert(0, str(ROOT / "pipeline"))
+    from index import doc_text
 
     # ------------------------------------------------------------- vectors
-    E = np.load(INDEX / "emb0.npy").astype(np.float32)
-    mean = E.mean(0)
-    _, _, Vt = np.linalg.svd(E - mean, full_matrices=False)
+    emb_dir = ROOT / "data" / "build" / "emb"
+    tag = Path(args.model).name if Path(args.model).exists() else args.model.replace("/", "__")
+    if args.model == BASE:
+        E = np.load(INDEX / "emb0.npy").astype(np.float32)
+    else:
+        E = embed(args.model, [doc_text(m) for m in motifs], emb_dir / f"{tag}__note.npy")
+    readings = {}
+    if args.readings:
+        readings = {r["id"]: r for r in map(json.loads, open(args.readings))}
+        assert all(i in readings for i in ids), "every motif needs a reading"
+        R = embed(args.model, [readings[i]["plain"] + " " + "; ".join(readings[i]["queries"]) for i in ids],
+                  emb_dir / f"{tag}__reading__{Path(args.readings).stem}.npy")
+        V = np.vstack([E, R])
+    else:
+        V = E
+    mean = V.mean(0)
+    _, _, Vt = np.linalg.svd(V - mean, full_matrices=False)
     P = Vt[: args.dims].T.astype(np.float32)  # 768 × dims
-    X = (E - mean) @ P
+    X = (V - mean) @ P
     X /= np.linalg.norm(X, axis=1, keepdims=True)
     scale = np.abs(X).max(0).astype(np.float32)
     Xq = np.clip(np.round(X / scale * 127), -127, 127).astype(np.int8)
@@ -124,6 +164,8 @@ def main():
         rec = {"e": echoes[i], "k": kin[i]}
         if m.get("refs"):
             rec["r"] = m["refs"]
+        if m["id"] in readings:
+            rec["p"] = readings[m["id"]]["plain"]
         per_letter[m["id"][0]][m["id"]] = rec
     for L, recs in per_letter.items():
         json.dump(recs, open(OUT / "refs" / f"{L}.json", "w"), ensure_ascii=False, separators=(",", ":"))
@@ -164,7 +206,8 @@ def main():
 
     json.dump({
         "culture_regions": culture_regions,
-        "count": len(ids), "dims": args.dims, "model": MODEL, "query_prompt": QUERY_PROMPT,
+        "count": len(ids), "dims": args.dims, "model": args.browser_model, "query_prompt": QUERY_PROMPT,
+        "second_vectors": bool(readings),
         "cultures": cultures, "culture_counts": [n for _, n in data["cultures"]],
         "regions": regions, "notable": notable,
     }, open(OUT / "meta.json", "w"), ensure_ascii=False, separators=(",", ":"))
